@@ -1,0 +1,12 @@
+[package]
+name = "libtls-sys"
+version = "0.1.0"
+authors = ["Reyk Floeter <contact@reykfloeter.com>"]
+edition = "2018"
+build = "build.rs"
+
+[dependencies]
+
+[build-dependencies]
+bindgen = "0.51.1"
+pkg-config = "0.3.16"
