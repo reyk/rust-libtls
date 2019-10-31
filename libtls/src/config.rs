@@ -1,0 +1,963 @@
+// Copyright (c) 2019 Reyk Floeter <contact@reykfloeter.com>
+//
+// Permission to use, copy, modify, and distribute this software for any
+// purpose with or without fee is hereby granted, provided that the above
+// copyright notice and this permission notice appear in all copies.
+//
+// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+// WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+// MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+// ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+// WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+// ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+// OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+//
+// The documentation is based on libtls man pages of the LibreSSL project,
+// provided under the same ISC-style license (see https://www.libressl.org/):
+//
+// Copyright (c) 2015, 2016 Bob Beck <beck@openbsd.org>
+// Copyright (c) 2016 Brent Cook <bcook@openbsd.org>
+// Copyright (c) 2017 Claudio Jeker <claudio@openbsd.org>
+// Copyright (c) 2015 Doug Hogan <doug@openbsd.org>
+// Copyright (c) 2017 Ingo Schwarze <schwarze@openbsd.org>
+// Copyright (c) 2014, 2015, 2016, 2017, 2018 Joel Sing <jsing@openbsd.org>
+// Copyright (c) 2015 Reyk Floeter <reyk@openbsd.org>
+// Copyright (c) 2014, 2015 Ted Unangst <tedu@openbsd.org>
+//
+// Permission to use, copy, modify, and distribute this software for any
+// purpose with or without fee is hereby granted, provided that the above
+// copyright notice and this permission notice appear in all copies.
+//
+// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+// WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+// MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+// ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+// WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+// ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+// OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+use std::ffi::{CStr, CString};
+use std::io;
+use std::os::raw::{c_char, c_int};
+use std::path::{Path, PathBuf};
+
+#[cfg(unix)]
+use std::os::unix::io::RawFd;
+
+use super::error;
+
+/// The TLS configuration context for [`Tls`] connections.
+///
+/// Before a [`Tls`] connection is created, a configuration must be created.
+/// Several methods exist to change the options of the configuration; see
+/// [`set_protocols`], [`ocsp_require_stapling`], [`verify`].
+///
+/// [`Tls`]: ../tls/struct.Tls.html
+/// [`ocsp_require_stapling`]: #method.ocsp_require_stapling
+/// [`set_protocols`]: #method.set_protocols
+/// [`tls_config_load_file`]: ../fn.tls_config_load_file.html
+/// [`verify`]: #method.verify
+pub struct TlsConfig(*mut libtls::tls_config);
+
+impl TlsConfig {
+    /// Create a new configuration.
+    ///
+    /// The `new` function allocates, initializes, and returns a new default
+    /// configuration object that can be used for future [`Tls`] connections.
+    ///
+    /// # Errors
+    ///
+    /// Returns an [`io::Error`] on error or an out of memory condition.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use libtls::config::TlsConfig;
+    /// let config = TlsConfig::new().unwrap();
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// [`tls_config_new(3)`](https://man.openbsd.org/tls_config_new.3)
+    ///
+    /// [`Tls`]: ../tls/struct.Tls.html
+    /// [`io::Error`]: https://doc.rust-lang.org/std/io/struct.Error.html
+    pub fn new() -> io::Result<Self> {
+        let config = unsafe { libtls::tls_config_new() };
+        if config.is_null() {
+            Err(io::Error::last_os_error())
+        } else {
+            Ok(TlsConfig(config))
+        }
+    }
+
+    /// Return path of the default CA file.
+    ///
+    /// The `default_ca_cert_file` utility function returns the path of the file that
+    /// contains the default root certificates.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use libtls::config::TlsConfig;
+    /// let certs = TlsConfig::default_ca_cert_file();
+    /// assert!(certs.is_absolute());
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// [`tls_default_ca_cert_file(3)`](https://man.openbsd.org/tls_default_ca_cert_file.3)
+    pub fn default_ca_cert_file() -> PathBuf {
+        unsafe { CStr::from_ptr(libtls::tls_default_ca_cert_file()) }
+            .to_string_lossy()
+            .into_owned()
+            .into()
+    }
+
+    /// Parse protocol string.
+    ///
+    /// The `tls_config_parse_protocols` utility function parses a protocol
+    /// string and returns the corresponding value via the protocols argument.
+    /// This value can then be passed to the [`set_protocols`] method.
+    /// The protocol string is a comma or colon separated list of keywords.
+    /// Valid keywords are `tlsv1.0`, `tlsv1.1`, `tlsv1.2`, `all` (all supported
+    /// protocols), `default` (an alias for secure), `legacy` (an alias for all) and
+    /// `secure` (currently TLSv1.2 only).  If a value has a negative prefix (in
+    /// the form of a leading exclamation mark) then it is removed from the list
+    /// of available protocols, rather than being added to it.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use libtls::*;
+    /// use libtls::config::TlsConfig;
+    ///
+    /// // Parse a list of allowed protocols:
+    /// let protocols = TlsConfig::parse_protocols("tlsv1.1,tlsv1.2").unwrap();
+    /// assert_eq!(protocols, TLS_PROTOCOL_TLSv1_1|TLS_PROTOCOL_TLSv1_2);
+    ///
+    /// // The default is to use the `secure` protocols, currently TLSv1.2 only:
+    /// let protocols = TlsConfig::parse_protocols("default").unwrap();
+    /// assert_eq!(protocols, TLS_PROTOCOL_TLSv1_2);
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// [`tls_config_parse_protocols(3)`](https://man.openbsd.org/tls_config_parse_protocols.3)
+    ///
+    /// [`set_protocols`]: #method.set_protocols
+    pub fn parse_protocols(protostr: &str) -> error::Result<u32> {
+        let c_protostr = CString::new(protostr)?;
+        let mut protocols: u32 = 0;
+
+        let retval =
+            unsafe { libtls::tls_config_parse_protocols(&mut protocols, c_protostr.as_ptr()) };
+        if retval == -1 {
+            Err(io::Error::new(io::ErrorKind::Other, "Invalid protocols string").into())
+        } else {
+            Ok(protocols)
+        }
+    }
+
+    /// Add additional files of a public and private key pair.
+    ///
+    /// The `add_keypair_file` method adds an additional public certificate, and
+    /// private key from the specified files, used as an alternative certificate
+    /// for Server Name Indication (server only).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use libtls::config::TlsConfig;
+    /// let mut config = TlsConfig::new().unwrap();
+    /// assert!(config.add_keypair_file("does_not_exist.crt", "does_not_exist.key").is_err());
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// [`tls_config_add_keypair_file(3)`](https://man.openbsd.org/tls_config_add_keypair_file.3)
+    pub fn add_keypair_file<P: AsRef<Path>>(
+        &mut self,
+        cert_file: P,
+        key_file: P,
+    ) -> error::Result<()> {
+        call_file2(
+            self,
+            (cert_file, "cert file"),
+            (key_file, "key file"),
+            libtls::tls_config_add_keypair_file,
+        )
+    }
+
+    /// Add an additional public and private key pair from memory.
+    ///
+    /// The `add_keypair_mem` method adds an additional public certificate, and
+    /// private key from memory, used as an alternative certificate for Server
+    /// Name Indication (server only).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use libtls::config::TlsConfig;
+    /// let mut config = TlsConfig::new().unwrap();
+    /// let valid_cert = br#"
+    /// -----BEGIN CERTIFICATE-----
+    /// MIIBRzCBzQIJAOafGpFrZiiZMAoGCCqGSM49BAMCMA0xCzAJBgNVBAYTAkNIMB4X
+    /// DTE5MTAzMTEzMTAxNVoXDTIwMTAzMDEzMTAxNVowDTELMAkGA1UEBhMCQ0gwdjAQ
+    /// BgcqhkjOPQIBBgUrgQQAIgNiAATR52G4F69lsOBXr0cHeMdV/ATgVBTOqFBbwhlZ
+    /// Kpa+2aC6hkThlX4ZGSsrJCyKh01i+bhJAU+SaPKK+WQZU6NtRbrpHlEJcgSelM2l
+    /// 9JVkLohfOkqTZYsALKB2r3etSv8wCgYIKoZIzj0EAwIDaQAwZgIxAOX9q/Kjbtqu
+    /// 7CtYcYKz9dj2Uakg8EZbjFnFKPfkPtVBDmVOp2fNvgbvqnIYIx1X1gIxAPSC+pt6
+    /// ZepAJKkLsLOLOnDU3peX/9CQLRTTg0ecwNmnB5LYp10GhRb6Ph2X05J+dg==
+    /// -----END CERTIFICATE-----
+    /// "#;
+    /// let valid_key = br#"
+    /// -----BEGIN PRIVATE KEY-----
+    /// MIG2AgEAMBAGByqGSM49AgEGBSuBBAAiBIGeMIGbAgEBBDBuhM0cHyem6XhZWn30
+    /// sgvzBdZRiyA2ehA0bMagtYajIt2qohnCC+zSynXbcEd1E2ChZANiAATR52G4F69l
+    /// sOBXr0cHeMdV/ATgVBTOqFBbwhlZKpa+2aC6hkThlX4ZGSsrJCyKh01i+bhJAU+S
+    /// aPKK+WQZU6NtRbrpHlEJcgSelM2l9JVkLohfOkqTZYsALKB2r3etSv8=
+    /// -----END PRIVATE KEY-----
+    /// "#;
+    ///
+    /// config.add_keypair_mem(valid_cert, valid_key).unwrap();
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// [`tls_config_add_keypair_mem(3)`](https://man.openbsd.org/tls_config_add_keypair_mem.3)
+    pub fn add_keypair_mem(&mut self, cert: &[u8], key: &[u8]) -> error::Result<()> {
+        error::cvt(self, (), unsafe {
+            libtls::tls_config_add_keypair_mem(
+                self.0,
+                cert.as_ptr(),
+                cert.len(),
+                key.as_ptr(),
+                key.len(),
+            )
+        })
+    }
+
+    /// Add additional files of a public and private key pair and an OCSP staple.
+    ///
+    /// The `add_keypair_ocsp_file` method adds an additional public certificate,
+    /// private key, and DER-encoded OCSP staple from the specified files, used
+    /// as an alternative certificate for Server Name Indication (server only).
+    ///
+    /// # See also
+    ///
+    /// [`add_keypair_file`](#method.add_keypair_file),
+    /// [`tls_config_add_keypair_ocsp_file(3)`](https://man.openbsd.org/tls_config_add_keypair_ocsp_file.3)
+    pub fn add_keypair_ocsp_file<P: AsRef<Path>>(
+        &mut self,
+        cert_file: P,
+        key_file: P,
+        ocsp_staple_file: P,
+    ) -> error::Result<()> {
+        call_file3(
+            self,
+            (cert_file, "cert file"),
+            (key_file, "key file"),
+            (ocsp_staple_file, "ocsp staple file"),
+            libtls::tls_config_add_keypair_ocsp_file,
+        )
+    }
+
+    /// Add an additional public and private key pair and OCSP staple from memory.
+    ///
+    /// The `add_keypair_ocsp_mem` method adds an additional public certificate,
+    /// private key, and DER-encoded OCSP staple from memory, used as an
+    /// alternative certificate for Server Name Indication (server only).
+    ///
+    /// # See also
+    ///
+    /// [`add_keypair_mem`](#method.add_keypair_mem),
+    /// [`tls_config_add_keypair_ocsp_mem(3)`](https://man.openbsd.org/tls_config_add_keypair_ocsp_mem.3)
+    pub fn tls_config_add_keypair_ocsp_mem(
+        &mut self,
+        cert: &[u8],
+        key: &[u8],
+        ocsp_staple: &[u8],
+    ) -> error::Result<()> {
+        error::cvt(self, (), unsafe {
+            libtls::tls_config_add_keypair_ocsp_mem(
+                self.0,
+                cert.as_ptr(),
+                cert.len(),
+                key.as_ptr(),
+                key.len(),
+                ocsp_staple.as_ptr(),
+                ocsp_staple.len(),
+            )
+        })
+    }
+
+    /// Set the ALPN protocols that are supported.
+    ///
+    /// The `set_alpn` method sets the ALPN protocols that are supported.  The
+    /// alpn string is a comma separated list of protocols, in order of
+    /// preference.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use libtls::config::TlsConfig;
+    /// let mut config = TlsConfig::new().unwrap();
+    ///
+    /// // The `h2` ALPN is used by HTTP/2:
+    /// config.set_alpn("h2").unwrap();
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// [`tls_config_set_alpn(3)`](https://man.openbsd.org/tls_config_set_alpn.3)
+    pub fn set_alpn(&mut self, alpn: &str) -> error::Result<()> {
+        call_string1(self, alpn, libtls::tls_config_set_alpn)
+    }
+
+    /// Set the CA file.
+    ///
+    /// The `set_ca_file` method sets the filename used to load a file containing
+    /// the root certificates.  The default filename can be returned with the
+    /// [`default_ca_cert_file`] function.
+    ///
+    /// # See also
+    ///
+    /// [`add_keypair_file`](#method.add_keypair_file.html),
+    /// [`tls_config_set_ca_file(3)`](https://man.openbsd.org/tls_config_set_ca_file.3)
+    ///
+    /// [`default_ca_cert_file`]: #method.default_ca_cert_file.html
+    pub fn set_ca_file<P: AsRef<Path>>(&mut self, ca_file: P) -> error::Result<()> {
+        call_file1(self, (ca_file, "ca file"), libtls::tls_config_set_ca_file)
+    }
+
+    /// Set the path that should be searched for the CA files.
+    ///
+    /// The `set_ca_path` method sets sets the path (directory) which should be
+    /// searched for root certificates.
+    ///
+    /// # See also
+    ///
+    /// [`set_ca_file`](#method.set_ca_file.html),
+    /// [`tls_config_set_ca_path(3)`](https://man.openbsd.org/tls_config_set_ca_path.3)
+    pub fn set_ca_path<P: AsRef<Path>>(&mut self, ca_path: P) -> error::Result<()> {
+        call_file1(self, (ca_path, "ca path"), libtls::tls_config_set_ca_path)
+    }
+
+    /// Set the CA file from memory.
+    ///
+    /// The `set_ca_mem` method sets the root certificates directly from memory.
+    ///
+    /// # See also
+    ///
+    /// [`add_keypair_mem`](#method.add_keypair_mem.html),
+    /// [`tls_config_set_ca_mem(3)`](https://man.openbsd.org/tls_config_set_ca_mem.3)
+    pub fn tls_config_set_ca_mem(&mut self, ca: &[u8]) -> error::Result<()> {
+        error::cvt(self, (), unsafe {
+            libtls::tls_config_set_ca_mem(self.0, ca.as_ptr(), ca.len())
+        })
+    }
+
+    /// Set the public certificate file.
+    ///
+    /// The `set_cert_file` method sets file from which the public certificate
+    /// will be read.
+    ///
+    /// # See also
+    ///
+    /// [`add_keypair_file`](#method.add_keypair_file),
+    /// [`tls_config_set_cert_file(3)`](https://man.openbsd.org/tls_config_set_cert_file.3)
+    pub fn set_cert_file<P: AsRef<Path>>(&mut self, cert_file: P) -> error::Result<()> {
+        call_file1(
+            self,
+            (cert_file, "cert file"),
+            libtls::tls_config_set_cert_file,
+        )
+    }
+
+    /// Set the public certificate from memory.
+    ///
+    /// The `set_cert_mem` method sets the public certificate directly from
+    /// memory.
+    ///
+    /// # See also
+    ///
+    /// [`add_keypair_mem`](#method.add_keypair_mem),
+    /// [`tls_config_set_cert_mem(3)`](https://man.openbsd.org/tls_config_set_cert_mem.3)
+    pub fn set_cert_mem(&mut self, cert: &[u8]) -> error::Result<()> {
+        error::cvt(self, (), unsafe {
+            libtls::tls_config_set_cert_mem(self.0, cert.as_ptr(), cert.len())
+        })
+    }
+
+    /// The `set_ciphers` method sets the list of ciphers that may be used.
+    /// Lists of ciphers are specified by name, and the permitted names are:
+    ///
+    /// * `secure` (or alias `default`)
+    /// * `compat`
+    /// * `legacy`
+    /// * `insecure` (or alias `all`)
+    ///
+    /// Alternatively, libssl cipher strings can be specified.  See the CIPHERS
+    /// section of [`openssl(1)`] for further information.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use libtls::config::TlsConfig;
+    /// let mut config = TlsConfig::new().unwrap();
+    ///
+    /// // Only use `compat` if you run into problems with the `secure` default!
+    /// config.set_ciphers("compat").unwrap();
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// [`openssl(1)`],
+    /// [`tls_config_set_ciphers(3)`](https://man.openbsd.org/tls_config_set_ciphers.3)
+    ///
+    /// [`openssl(1)`]: http://man.openbsd.org/openssl.1#CIPHERS
+    pub fn set_ciphers(&mut self, ciphers: &str) -> error::Result<()> {
+        call_string1(self, ciphers, libtls::tls_config_set_ciphers)
+    }
+
+    /// Set the CRL file.
+    ///
+    /// The `set_crl_file` method sets the filename used to load a file
+    /// containing the Certificate Revocation List (CRL).
+    ///
+    /// # See also
+    ///
+    /// [`add_keypair_file`](#method.add_keypair_file.html),
+    /// [`tls_config_set_crl_file(3)`](https://man.openbsd.org/tls_config_set_crl_file.3)
+    pub fn set_crl_file<P: AsRef<Path>>(&mut self, crl_file: P) -> error::Result<()> {
+        call_file1(
+            self,
+            (crl_file, "crl file"),
+            libtls::tls_config_set_crl_file,
+        )
+    }
+
+    /// Set the CRL from memory.
+    ///
+    /// The `set_crl_mem` method sets the Certificate Revocation List (CRL)
+    /// directly from memory.
+    ///
+    /// # See also
+    ///
+    /// [`add_keypair_mem`](#method.add_keypair_mem.html),
+    /// [`tls_config_set_crl_mem(3)`](https://man.openbsd.org/tls_config_set_crl_mem.3)
+    pub fn set_crl_mem(&mut self, crl: &[u8]) -> error::Result<()> {
+        error::cvt(self, (), unsafe {
+            libtls::tls_config_set_crl_mem(self.0, crl.as_ptr(), crl.len())
+        })
+    }
+
+    /// Set the parameters of an Diffie-Hellman Ephemeral (DHE) key exchange.
+    ///
+    /// The `set_dheparams` method specifies the parameters that will be used
+    /// during Diffie-Hellman Ephemeral (DHE) key exchange.  Possible values are
+    /// `none`, `auto` and `legacy`.  In `auto` mode, the key size for the
+    /// ephemeral key is automatically selected based on the size of the private
+    /// key being used for signing.  In `legacy` mode, 1024 bit ephemeral keys
+    /// are used.  The default value is `none`, which disables DHE key exchange.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use libtls::config::TlsConfig;
+    /// let mut config = TlsConfig::new().unwrap();
+    /// config.set_dheparams("auto").unwrap();
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// [`tls_config_set_dheparams(3)`](https://man.openbsd.org/tls_config_set_dheparams.3)
+    pub fn set_dheparams(&mut self, dheparams: &str) -> error::Result<()> {
+        call_string1(self, dheparams, libtls::tls_config_set_dheparams)
+    }
+
+    /// The `set_ecdhecurve` method was replaced by [set_ecdhecurves](#method.set_ecdhecurves).
+    #[deprecated(
+        since = "2.6.1",
+        note = "Replaced by [set_ecdhecurves](#method.set_ecdhecurves)."
+    )]
+    pub fn set_ecdhecurve(&mut self, ecdhecurve: &str) -> error::Result<()> {
+        call_string1(self, ecdhecurve, libtls::tls_config_set_ecdhecurve)
+    }
+
+    /// Set the curves of an Elliptic Curve Diffie-Hellman Ephemeral (ECDHE) key exchange.
+    ///
+    /// The `set_ecdhecurves` method specifies the names of the elliptic curves
+    /// that may be used during Elliptic Curve Diffie-Hellman Ephemeral (ECDHE)
+    /// key exchange.  This is a comma separated list, given in order of
+    /// preference.  The special value of "default" will use the default curves
+    /// (currently X25519, P-256 and P-384).  This function replaces
+    /// [`set_ecdhecurve`], which is deprecated.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use libtls::config::TlsConfig;
+    /// let mut config = TlsConfig::new().unwrap();
+    /// config.set_ecdhecurves("X25519,P-384").unwrap();
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// [`tls_config_set_ecdhecurves(3)`](https://man.openbsd.org/tls_config_set_ecdhecurves.3)
+    ///
+    /// [`set_ecdhecurve`]: #method.set_ecdhecurve
+    pub fn set_ecdhecurves(&mut self, ecdhecurves: &str) -> error::Result<()> {
+        call_string1(self, ecdhecurves, libtls::tls_config_set_ecdhecurves)
+    }
+
+    /// Set the private key file.
+    ///
+    /// The `set_key_file` method sets the file from which the private key will
+    /// be read.
+    ///
+    /// # See also
+    ///
+    /// [`add_keypair_file`](#method.add_keypair_file),
+    /// [`tls_config_set_key_file(3)`](https://man.openbsd.org/tls_config_set_key_file.3)
+    pub fn set_key_file<P: AsRef<Path>>(&mut self, key_file: P) -> error::Result<()> {
+        call_file1(
+            self,
+            (key_file, "key file"),
+            libtls::tls_config_set_key_file,
+        )
+    }
+
+    /// Set the private key from memory.
+    ///
+    /// The `set_key_mem` method directly sets the private key from memory.
+    ///
+    /// # See also
+    ///
+    /// [`add_keypair_mem`](#method.add_keypair_mem),
+    /// [`tls_config_set_key_mem(3)`](https://man.openbsd.org/tls_config_set_key_mem.3)
+    pub fn set_key_mem(&mut self, key: &[u8]) -> error::Result<()> {
+        error::cvt(self, (), unsafe {
+            libtls::tls_config_set_key_mem(self.0, key.as_ptr(), key.len())
+        })
+    }
+
+    /// Set the files of the public and private key pair.
+    ///
+    /// The `set_keypair_file` method sets the files from which the public
+    /// certificate, and private key will be read.
+    ///
+    /// # See also
+    ///
+    /// [`add_keypair_file`](#method.add_keypair_file),
+    /// [`tls_config_set_keypair_file(3)`](https://man.openbsd.org/tls_config_set_keypair_file.3)
+    pub fn set_keypair_file<P: AsRef<Path>>(
+        &mut self,
+        cert_file: P,
+        key_file: P,
+    ) -> error::Result<()> {
+        call_file2(
+            self,
+            (cert_file, "cert file"),
+            (key_file, "key file"),
+            libtls::tls_config_set_keypair_file,
+        )
+    }
+
+    /// Set the public and private key pair from memory.
+    ///
+    /// The `set_keypair_mem` method directly sets the public certificate, and
+    /// private key from memory.
+    ///
+    /// # See also
+    ///
+    /// [`add_keypair_mem`](#method.add_keypair_mem),
+    /// [`tls_config_set_keypair_mem(3)`](https://man.openbsd.org/tls_config_set_keypair_mem.3)
+    pub fn set_keypair_mem(&mut self, cert: &[u8], key: &[u8]) -> error::Result<()> {
+        error::cvt(self, (), unsafe {
+            libtls::tls_config_set_keypair_mem(
+                self.0,
+                cert.as_ptr(),
+                cert.len(),
+                key.as_ptr(),
+                key.len(),
+            )
+        })
+    }
+
+    /// Set the files of a public and private key pair and an OCSP staple.
+    ///
+    /// The `set_keypair_ocsp_file` method sets the public certificate,
+    /// private key, and DER-encoded OCSP staple from the specified files.
+    ///
+    /// # See also
+    ///
+    /// [`add_keypair_ocsp_file`](#method.add_keypair_ocsp_file),
+    /// [`tls_config_set_keypair_ocsp_file(3)`](https://man.openbsd.org/tls_config_set_keypair_ocsp_file.3)
+    pub fn set_keypair_ocsp_file<P: AsRef<Path>>(
+        &mut self,
+        cert_file: P,
+        key_file: P,
+        ocsp_staple_file: P,
+    ) -> error::Result<()> {
+        call_file3(
+            self,
+            (cert_file, "cert file"),
+            (key_file, "key file"),
+            (ocsp_staple_file, "ocsp staple file"),
+            libtls::tls_config_set_keypair_ocsp_file,
+        )
+    }
+
+    /// Set the public and private key pair and an OCSP staple from memory.
+    ///
+    /// The `set_keypair_ocsp_mem` method sets the public certificate,
+    /// private key, and DER-encoded OCSP staple directly from memory.
+    ///
+    /// # See also
+    ///
+    /// [`add_keypair_ocsp_mem`](#method.add_keypair_ocsp_mem),
+    /// [`tls_config_set_keypair_ocsp_mem(3)`](https://man.openbsd.org/tls_config_set_keypair_ocsp_mem.3)
+    pub fn set_keypair_ocsp_mem(
+        &mut self,
+        cert: &[u8],
+        key: &[u8],
+        ocsp_staple: &[u8],
+    ) -> error::Result<()> {
+        error::cvt(self, (), unsafe {
+            libtls::tls_config_set_keypair_ocsp_mem(
+                self.0,
+                cert.as_ptr(),
+                cert.len(),
+                key.as_ptr(),
+                key.len(),
+                ocsp_staple.as_ptr(),
+                ocsp_staple.len(),
+            )
+        })
+    }
+
+    /// Set the OCSP staple from memory.
+    ///
+    /// The `set_keypair_ocsp_mem` method sets a DER-encoded OCSP response to be
+    /// stapled during the TLS handshake from memory.
+    ///
+    /// # See also
+    ///
+    /// [`add_keypair_mem`](#method.add_keypair_mem),
+    /// [`tls_config_set_ocsp_staple_mem(3)`](https://man.openbsd.org/tls_config_set_ocsp_staple_mem.3)
+    pub fn set_ocsp_staple_mem(&mut self, ocsp_staple: &[u8]) -> error::Result<()> {
+        error::cvt(self, (), unsafe {
+            libtls::tls_config_set_ocsp_staple_mem(self.0, ocsp_staple.as_ptr(), ocsp_staple.len())
+        })
+    }
+
+    /// Set the OCSP staple file.
+    ///
+    /// The `set_keypair_ocsp_mem` method sets a DER-encoded OCSP response to be
+    /// stapled during the TLS handshake from the specified file.
+    ///
+    ///
+    /// # See also
+    ///
+    /// [`add_keypair_file`](#method.add_keypair_file),
+    /// [`tls_config_set_ocsp_staple_file(3)`](https://man.openbsd.org/tls_config_set_ocsp_staple_file.3)
+    pub fn set_ocsp_staple_file<P: AsRef<Path>>(
+        &mut self,
+        ocsp_staple_file: P,
+    ) -> error::Result<()> {
+        call_file1(
+            self,
+            (ocsp_staple_file, "ocsp staple file"),
+            libtls::tls_config_set_ocsp_staple_file,
+        )
+    }
+
+    /// The `set_protocols` method
+    ///
+    /// # See also
+    ///
+    /// [`tls_config_set_protocols(3)`](https://man.openbsd.org/tls_config_set_protocols.3)
+    pub fn set_protocols(&mut self, protocols: u32) -> error::Result<()> {
+        call_arg1(self, protocols, libtls::tls_config_set_protocols)
+    }
+
+    /// The `set_session_fd` method
+    ///
+    /// # See also
+    ///
+    /// [`tls_config_set_session_fd(3)`](https://man.openbsd.org/tls_config_set_session_fd.3)
+    #[cfg(unix)]
+    pub fn set_session_fd(&mut self, session_fd: RawFd) -> error::Result<()> {
+        call_arg1(self, session_fd, libtls::tls_config_set_session_fd)
+    }
+
+    /// Set the certificate verification depth.
+    ///
+    /// The `set_verify_depth` method limits the number of intermediate
+    /// certificates that will be followed during certificate validation.
+    ///
+    /// # See also
+    ///
+    /// [`tls_config_set_verify_depth(3)`](https://man.openbsd.org/tls_config_set_verify_depth.3)
+    pub fn set_set_verify_depth(&mut self, verify_depth: i32) -> error::Result<()> {
+        call_arg1(self, verify_depth, libtls::tls_config_set_verify_depth)
+    }
+
+    /// The `prefer_ciphers_client` method
+    ///
+    /// # See also
+    ///
+    /// [`tls_config_prefer_ciphers_client(3)`](https://man.openbsd.org/tls_config_prefer_ciphers_client.3)
+    pub fn prefer_ciphers_client(&mut self) {
+        unsafe { libtls::tls_config_prefer_ciphers_client(self.0) }
+    }
+
+    /// The `prefer_ciphers_server` method
+    ///
+    /// # See also
+    ///
+    /// [`tls_config_prefer_ciphers_server(3)`](https://man.openbsd.org/tls_config_prefer_ciphers_server.3)
+    pub fn prefer_ciphers_server(&mut self) {
+        unsafe { libtls::tls_config_prefer_ciphers_server(self.0) }
+    }
+
+    /// The `insecure_noverifycert` method
+    ///
+    /// # See also
+    ///
+    /// [`tls_config_insecure_noverifycert(3)`](https://man.openbsd.org/tls_config_insecure_noverifycert.3)
+    pub fn insecure_noverifycert(&mut self) {
+        unsafe { libtls::tls_config_insecure_noverifycert(self.0) }
+    }
+
+    /// The `insecure_noverifyname` method
+    ///
+    /// # See also
+    ///
+    /// [`tls_config_insecure_noverifyname(3)`](https://man.openbsd.org/tls_config_insecure_noverifyname.3)
+    pub fn insecure_noverifyname(&mut self) {
+        unsafe { libtls::tls_config_insecure_noverifyname(self.0) }
+    }
+
+    /// The `insecure_noverifytime` method
+    ///
+    /// # See also
+    ///
+    /// [`tls_config_insecure_noverifytime(3)`](https://man.openbsd.org/tls_config_insecure_noverifytime.3)
+    pub fn insecure_noverifytime(&mut self) {
+        unsafe { libtls::tls_config_insecure_noverifytime(self.0) }
+    }
+
+    /// The `verify` method
+    ///
+    /// # See also
+    ///
+    /// [`tls_config_verify(3)`](https://man.openbsd.org/tls_config_verify.3)
+    pub fn verify(&mut self) {
+        unsafe { libtls::tls_config_verify(self.0) }
+    }
+
+    /// The `ocsp_require_stapling` method
+    ///
+    /// # See also
+    ///
+    /// [`tls_config_ocsp_require_stapling(3)`](https://man.openbsd.org/tls_config_ocsp_require_stapling.3)
+    pub fn ocsp_require_stapling(&mut self) {
+        unsafe { libtls::tls_config_ocsp_require_stapling(self.0) }
+    }
+
+    /// The `verify_client` method
+    ///
+    /// # See also
+    ///
+    /// [`tls_config_verify_client(3)`](https://man.openbsd.org/tls_config_verify_client.3)
+    pub fn verify_client(&mut self) {
+        unsafe { libtls::tls_config_verify_client(self.0) }
+    }
+
+    /// The `verify_client_optional` method
+    ///
+    /// # See also
+    ///
+    /// [`tls_config_verify_client_optional(3)`](https://man.openbsd.org/tls_config_verify_client_optional.3)
+    pub fn verify_client_optional(&mut self) {
+        unsafe { libtls::tls_config_verify_client_optional(self.0) }
+    }
+
+    /// The `clear_keys` method
+    ///
+    /// # See also
+    ///
+    /// [`tls_config_clear_keys(3)`](https://man.openbsd.org/tls_config_clear_keys.3)
+    pub fn clear_keys(&mut self) {
+        unsafe { libtls::tls_config_clear_keys(self.0) }
+    }
+
+    /// The `set_session_id` method
+    ///
+    /// # See also
+    ///
+    /// [`tls_config_set_session_id(3)`](https://man.openbsd.org/tls_config_set_session_id.3)
+    pub fn set_session_id(&mut self, session_id: &[u8]) -> error::Result<()> {
+        error::cvt(self, (), unsafe {
+            libtls::tls_config_set_session_id(self.0, session_id.as_ptr(), session_id.len())
+        })
+    }
+
+    /// The `set_session_lifetime` method
+    ///
+    /// # See also
+    ///
+    /// [`tls_config_set_session_lifetime(3)`](https://man.openbsd.org/tls_config_set_session_lifetime.3)
+    pub fn set_session_lifetime(&mut self, lifetime: i32) -> error::Result<()> {
+        call_arg1(self, lifetime, libtls::tls_config_set_session_lifetime)
+    }
+
+    /// The `add_ticket_key` method
+    ///
+    /// # See also
+    ///
+    /// [`tls_config_add_ticket_key(3)`](https://man.openbsd.org/tls_config_add_ticket_key.3)
+    pub fn add_ticket_key(&mut self, keyrev: u32, key: &mut [u8]) -> error::Result<()> {
+        // XXX key should be const, consider changing this in the upstream API
+        error::cvt(self, (), unsafe {
+            libtls::tls_config_add_ticket_key(self.0, keyrev, key.as_mut_ptr(), key.len())
+        })
+    }
+
+    /// The `error` method
+    ///
+    /// # See also
+    ///
+    /// [`tls_config_error(3)`](https://man.openbsd.org/tls_config_error.3)
+    pub fn last_error(&self) -> String {
+        unsafe {
+            let c_error = libtls::tls_config_error(self.0);
+            error::cvt_string(c_error, "unknown TLS config error")
+        }
+    }
+}
+
+impl From<*mut libtls::tls_config> for TlsConfig {
+    fn from(config: *mut libtls::tls_config) -> Self {
+        if config.is_null() {
+            panic!(io::Error::last_os_error())
+        }
+        TlsConfig(config)
+    }
+}
+
+impl Drop for TlsConfig {
+    /// The `free` function
+    ///
+    /// # See also
+    ///
+    /// [`tls_config_free(3)`](https://man.openbsd.org/tls_config_free.3)
+    fn drop(&mut self) {
+        unsafe { libtls::tls_config_free(self.0) };
+    }
+}
+
+// XXX tls_load_file
+//pub fn tls_load_file()
+
+// XXX tls_unload_file
+//pub fn tls_unload_file()
+
+fn call_file1<P: AsRef<Path>>(
+    config: &mut TlsConfig,
+    file1: (P, &str),
+    f: unsafe extern "C" fn(*mut libtls::tls_config, *const c_char) -> c_int,
+) -> error::Result<()> {
+    let s_file1 = error::cvt_option(
+        file1.0.as_ref().to_str(),
+        io::Error::new(io::ErrorKind::InvalidData, file1.1),
+    )?;
+    unsafe {
+        let c_file1 = CString::new(s_file1)?;
+        error::cvt(config, (), f(config.0, c_file1.as_ptr()))
+    }
+}
+
+fn call_file2<P: AsRef<Path>>(
+    config: &mut TlsConfig,
+    file1: (P, &str),
+    file2: (P, &str),
+    f: unsafe extern "C" fn(*mut libtls::tls_config, *const c_char, *const c_char) -> c_int,
+) -> error::Result<()> {
+    let s_file1 = error::cvt_option(
+        file1.0.as_ref().to_str(),
+        io::Error::new(io::ErrorKind::InvalidData, file1.1),
+    )?;
+    let s_file2 = error::cvt_option(
+        file2.0.as_ref().to_str(),
+        io::Error::new(io::ErrorKind::InvalidData, file2.1),
+    )?;
+    unsafe {
+        let c_file1 = CString::new(s_file1)?;
+        let c_file2 = CString::new(s_file2)?;
+        error::cvt(config, (), f(config.0, c_file1.as_ptr(), c_file2.as_ptr()))
+    }
+}
+
+fn call_file3<P: AsRef<Path>>(
+    config: &mut TlsConfig,
+    file1: (P, &str),
+    file2: (P, &str),
+    file3: (P, &str),
+    f: unsafe extern "C" fn(
+        *mut libtls::tls_config,
+        *const c_char,
+        *const c_char,
+        *const c_char,
+    ) -> c_int,
+) -> error::Result<()> {
+    let s_file1 = error::cvt_option(
+        file1.0.as_ref().to_str(),
+        io::Error::new(io::ErrorKind::InvalidData, file1.1),
+    )?;
+    let s_file2 = error::cvt_option(
+        file2.0.as_ref().to_str(),
+        io::Error::new(io::ErrorKind::InvalidData, file2.1),
+    )?;
+    let s_file3 = error::cvt_option(
+        file3.0.as_ref().to_str(),
+        io::Error::new(io::ErrorKind::InvalidData, file3.1),
+    )?;
+    unsafe {
+        let c_file1 = CString::new(s_file1)?;
+        let c_file2 = CString::new(s_file2)?;
+        let c_file3 = CString::new(s_file3)?;
+        error::cvt(
+            config,
+            (),
+            f(
+                config.0,
+                c_file1.as_ptr(),
+                c_file2.as_ptr(),
+                c_file3.as_ptr(),
+            ),
+        )
+    }
+}
+
+fn call_string1(
+    config: &mut TlsConfig,
+    string1: &str,
+    f: unsafe extern "C" fn(*mut libtls::tls_config, *const c_char) -> c_int,
+) -> error::Result<()> {
+    unsafe {
+        let c_string1 = CString::new(string1)?;
+        error::cvt(config, (), f(config.0, c_string1.as_ptr()))
+    }
+}
+
+fn call_arg1<T>(
+    config: &mut TlsConfig,
+    arg1: T,
+    f: unsafe extern "C" fn(*mut libtls::tls_config, T) -> c_int,
+) -> error::Result<()> {
+    error::cvt(config, (), unsafe { f(config.0, arg1) })
+}

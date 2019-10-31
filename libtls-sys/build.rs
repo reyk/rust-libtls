@@ -20,18 +20,41 @@ use std::path::PathBuf;
 
 fn main() {
     // First try to find libtls via pkg-config
-    if let Err(_) = pkg_config::probe_library("libtls") {
-        // OpenBSD doesn't install libtls.pc
-        println!("cargo:rustc-link-lib=tls");
-        println!("cargo:rustc-link-lib=ssl");
-        println!("cargo:rustc-link-lib=crypto");
-    }
+    let mut pkg = pkg_config::Config::new();
+    let cflags: Vec<String> = match pkg.atleast_version("2.7.0").probe("libtls") {
+        Ok(library) => {
+            let mut cflags = Vec::new();
+            cflags.append(
+                &mut library
+                    .defines
+                    .iter()
+                    .map(|(k, v)| format!("-D{}={}", k, v.as_ref().unwrap()))
+                    .collect(),
+            );
+            cflags.append(
+                &mut library
+                    .include_paths
+                    .iter()
+                    .map(|p| format!("-I{}", p.display()))
+                    .collect(),
+            );
+            cflags
+        }
+        Err(_) => {
+            // OpenBSD doesn't install libtls.pc
+            println!("cargo:rustc-link-lib=tls");
+            println!("cargo:rustc-link-lib=ssl");
+            println!("cargo:rustc-link-lib=crypto");
+            vec!["-I/usr/include".to_owned()]
+        }
+    };
 
     // Track custom changes
     println!("cargo:rerun-if-changed=wrapper.h");
 
     // Generate bindings
     let bindings = bindgen::Builder::default()
+        .clang_arg(cflags.join(" "))
         .header("wrapper.h")
         .generate()
         .expect("Unable to generate libtls bindings");

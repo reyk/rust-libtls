@@ -12,6 +12,11 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
+#![doc(
+    html_logo_url = "https://www.libressl.org/images/libressl.jpg",
+    html_favicon_url = "https://www.libressl.org/favicon.ico"
+)]
+
 #![allow(non_upper_case_globals)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
