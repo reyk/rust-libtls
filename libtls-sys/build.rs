@@ -19,9 +19,11 @@ use std::env;
 use std::path::PathBuf;
 
 fn main() {
-    // First try to find libtls via pkg-config
+    // First try to find libtls via pkg-config -
+    // "statik" is set to true but pkg_config actually only enables it
+    // if the library is found outside of /usr.
     let mut pkg = pkg_config::Config::new();
-    let cflags: Vec<String> = match pkg.atleast_version("2.7.0").probe("libtls") {
+    let cflags = match pkg.statik(true).atleast_version("2.7.0").probe("libtls") {
         Ok(library) => {
             let mut cflags = Vec::new();
             cflags.append(
