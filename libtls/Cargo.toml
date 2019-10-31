@@ -4,7 +4,7 @@ version = "0.1.1"
 authors = ["Reyk Floeter <contact@reykfloeter.com>"]
 edition = "2018"
 license = "ISC"
-description = "Rust language bindings for LibreSSL's libtls library."
+description = "Rust bindings for LibreSSL's libtls library."
 repository = "https://github.com/reyk/rust-libtls"
 
 [dependencies]

@@ -1,4 +1,4 @@
-//! Rust language bindings for [LibreSSL]'s [libtls] library.
+//! Rust bindings for [LibreSSL]'s [libtls] library.
 //!
 //! The [LibreSSL] project provides a free TLS and crypto stack that was forked
 //! from [OpenSSL] in 2014.  The goals are to provide a modernized codebase,

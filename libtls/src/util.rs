@@ -18,7 +18,7 @@ use std::os::raw::{c_char, c_int};
 use std::path::Path;
 
 use super::config::TlsConfig;
-use super::error::{TlsError, Result};
+use super::error::{Result, TlsError};
 
 pub fn call_file1<P: AsRef<Path>>(
     config: &mut TlsConfig,
