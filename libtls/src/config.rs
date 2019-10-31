@@ -75,6 +75,7 @@
 use std::ffi::{CStr, CString};
 use std::io;
 use std::path::{Path, PathBuf};
+use std::marker::{Send, Sync};
 
 #[cfg(unix)]
 use std::os::unix::io::RawFd;
@@ -993,6 +994,9 @@ impl Drop for TlsConfig {
         unsafe { libtls::tls_config_free(self.0) };
     }
 }
+
+unsafe impl Send for TlsConfig {}
+unsafe impl Sync for TlsConfig {}
 
 /// Return path of the default CA file.
 ///

@@ -139,3 +139,6 @@ impl Drop for Tls {
         };
     }
 }
+
+unsafe impl Send for Tls {}
+unsafe impl Sync for Tls {}
