@@ -296,6 +296,21 @@ impl TlsConfig {
         call_file1(self, (ca_path, "ca path"), libtls::tls_config_set_ca_path)
     }
 
+    /// Set the CA from memory.
+    ///
+    /// The `set_ca_mem` method directly sets the root certificates directly from memory.
+    ///
+    ///
+    /// # See also
+    ///
+    /// [`add_keypair_mem`](#method.add_keypair_mem),
+    /// [`tls_config_set_ca_mem(3)`](https://man.openbsd.org/tls_config_set_ca_mem.3)
+    pub fn set_ca_mem(&mut self, ca: &[u8]) -> error::Result<()> {
+        cvt(self, (), unsafe {
+            libtls::tls_config_set_ca_mem(self.0, ca.as_ptr(), ca.len())
+        })
+    }
+
     /// Set the CA file from memory.
     ///
     /// The `set_ca_mem` method sets the root certificates directly from memory.
