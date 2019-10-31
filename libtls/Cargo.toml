@@ -6,3 +6,6 @@ edition = "2018"
 
 [dependencies]
 libtls-sys = { path = "../libtls-sys" }
+
+[dev-dependencies]
+rand = "*"

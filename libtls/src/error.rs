@@ -12,12 +12,9 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-use std::ffi::{self, CStr, CString};
+use std::ffi;
 use std::fmt;
 use std::io;
-use std::os::raw::{c_char, c_int};
-
-use super::config::TlsConfig;
 
 /// An error returned by [`Tls`] and [`TlsConfig`] methods.
 ///
@@ -46,6 +43,8 @@ pub enum TlsError {
     IoError(io::Error),
     /// An interior nul byte was found.
     NulError(ffi::NulError),
+    /// No error was reported.
+    NoError,
 }
 
 impl fmt::Display for TlsError {
@@ -55,6 +54,7 @@ impl fmt::Display for TlsError {
             TlsError::ConfigError(s) => write!(f, "{}", s),
             TlsError::IoError(err) => err.fmt(f),
             TlsError::NulError(err) => err.fmt(f),
+            TlsError::NoError => write!(f, "no error"),
         }
     }
 }
@@ -73,49 +73,3 @@ impl From<ffi::NulError> for TlsError {
 
 /// A result type that is returning a [TlsError](enum.TlsError.html).
 pub type Result<T> = std::result::Result<T, TlsError>;
-
-#[doc(hidden)]
-pub fn cvt<T>(config: &mut TlsConfig, ok: T, retval: c_int) -> Result<T> {
-    match retval {
-        -1 => {
-            // Instead of storing a reference to the error context in TlsError
-            // (by storing the *mut tls_config to call tls_config_error() later),
-            // we store the actual error as a String.  This needs a bit more
-            // memory but it is safe to transfer the error between threads and
-            // to use it later, even after the config is dropped.
-            let errstr = config.last_error();
-            Err(TlsError::ConfigError(errstr))
-        }
-        _ => Ok(ok),
-    }
-}
-
-#[doc(hidden)]
-pub fn cvt_io<T, E>(ok: T, retval: c_int) -> std::result::Result<T, E>
-where
-    E: std::convert::From<io::Error>,
-{
-    match retval {
-        -1 => Err(io::Error::last_os_error().into()),
-        _ => Ok(ok),
-    }
-}
-
-#[doc(hidden)]
-pub fn cvt_option<T>(option: Option<T>, error: io::Error) -> Result<T> {
-    match option {
-        None => Err(TlsError::IoError(error)),
-        Some(v) => Ok(v),
-    }
-}
-
-#[doc(hidden)]
-pub unsafe fn cvt_string(error: *const c_char, default: &str) -> String {
-    let c_default = CString::new(default).expect("default error contains nul");
-    let c_str = if error.is_null() {
-        &c_default
-    } else {
-        CStr::from_ptr(error)
-    };
-    c_str.to_string_lossy().into_owned()
-}

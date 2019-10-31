@@ -38,7 +38,7 @@
 
 use std::io;
 
-use super::error;
+use super::*;
 
 /// XXX tls
 pub struct Tls(*mut libtls::tls);
@@ -63,17 +63,36 @@ impl Tls {
         Self::new(libtls::tls_server)
     }
 
-    /// XXX tls_reset
+    /// Reset the TLS connection.
+    ///
+    /// A TLS context can be `reset`, allowing for it to be reused.
+    ///
+    /// # See also
+    ///
+    /// [`tls_reset(3)`](https://man.openbsd.org/tls_reset.3)
     pub fn reset(&mut self) {
         unsafe { libtls::tls_reset(self.0) };
     }
 
-    /// XXX tls_error
-    pub fn last_error(&self) -> String {
-        unsafe {
-            let c_error = libtls::tls_error(self.0);
-            error::cvt_string(c_error, "no TLS error")
-        }
+    /// Returns the last error of the TLS context.
+    ///
+    /// The `last_error` method returns an error if no error occurred with
+    /// the TLS context during or since the last call to [`handshake`],
+    /// [`read`], [`write`], [`close`], or [`reset`] involving the context,
+    /// or if memory allocation failed while trying to assemble the string
+    /// describing the most recent error related to the context.
+    ///
+    /// # See also
+    ///
+    /// [`tls_error(3)`](https://man.openbsd.org/tls_error.3)
+    ///
+    /// [`handshake`]: #method.handshake
+    /// [`read`]: #method.read
+    /// [`write`]: #method.write
+    /// [`close`]: #method.close
+    /// [`reset`]: #method.reset
+    pub fn last_error(&self) -> error::Result<String> {
+        unsafe { cvt_no_error(libtls::tls_error(self.0)) }
     }
 }
 
@@ -87,8 +106,36 @@ impl From<*mut libtls::tls> for Tls {
 }
 
 impl Drop for Tls {
-    /// XXX tls_config_free
+    /// The `drop` method frees the [`Tls`] context and forcibly closes
+    /// the connection.
+    ///
+    /// Please note that it calls both [`tls_close(3)`] and [`tls_free(3)`]
+    /// internally to avoid leaking the internal socket file descriptor.
+    /// `libtls` itself does not close the socket when calling [`tls_free(3)`]
+    /// and requires the program to call [`tls_close(3)`] itself but
+    /// this would be unsafe in Rust when applied to the [`Drop`] trait.
+    ///
+    /// # See also
+    ///
+    /// [`tls_close(3)`],
+    /// [`tls_free(3)`]
+    ///
+    /// [`Drop`]: https://doc.rust-lang.org/std/ops/trait.Drop.html
+    /// [`Tls`]: ../tls/struct.Tls.html
+    /// [`tls_free(3)`]: https://man.openbsd.org/tls_free.3
+    /// [`tls_close(3)`]: https://man.openbsd.org/tls_close.3
     fn drop(&mut self) {
-        unsafe { libtls::tls_free(self.0) };
+        unsafe {
+            // XXX Make sure that the underlying fd is not leaked.
+            // XXX libtls doesn't close the socket in tls_free(3), but
+            // XXX this wouldn't satisfy the safety rules of Rust.
+            loop {
+                let ret = libtls::tls_close(self.0);
+                if !(ret == TLS_WANT_POLLIN || ret == TLS_WANT_POLLOUT) {
+                    break;
+                }
+            }
+            libtls::tls_free(self.0);
+        };
     }
 }
