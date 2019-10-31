@@ -1,11 +1,12 @@
 [package]
 name = "libtls-sys"
-version = "3.0.0"
+version = "0.1.1"
 authors = ["Reyk Floeter <contact@reykfloeter.com>"]
 edition = "2018"
 build = "build.rs"
-
-[dependencies]
+description = "Rust language bindings for LibreSSL's libtls library."
+repository = "https://github.com/reyk/rust-libtls"
+links = "libtls"
 
 [build-dependencies]
 bindgen = "0.51.1"

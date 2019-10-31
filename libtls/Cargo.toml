@@ -1,11 +1,14 @@
 [package]
 name = "libtls"
-version = "3.0.2"
+version = "0.1.1"
 authors = ["Reyk Floeter <contact@reykfloeter.com>"]
 edition = "2018"
+license = "ISC"
+description = "Rust language bindings for LibreSSL's libtls library."
+repository = "https://github.com/reyk/rust-libtls"
 
 [dependencies]
-libtls-sys = { path = "../libtls-sys" }
+libtls-sys = { path = "../libtls-sys", version = "0.1.1" }
 
 [dev-dependencies]
-rand = "*"
+rand = "0.7.2"
