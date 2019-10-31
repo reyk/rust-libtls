@@ -7,8 +7,10 @@
 //! [LibreSSL] provides C APIs that are compatible to [OpenSSL]'s [libssl] and
 //! [libcrypto] libraries.  It also provides [libtls], a new TLS library that
 //! is designed to make it easier to write foolproof applications.
+//!
 //! This crate provides Rust language bindings for [libtls] only, as the other
 //! [LibreSSL] APIs can be used with the existing [rust-openssl] crate.
+//! [LibreSSL] versions 2.7.0 through 3.0.2 (or later) are supported.
 //!
 //! # Copyright and license
 //!
@@ -156,7 +158,7 @@ pub type TlsWriteCb = libtls::tls_write_cb;
 ///
 /// [`tls_init(3)`](https://man.openbsd.org/tls_init.3)
 #[deprecated(
-    since = "2.7.0",
+    since = "LibreSSL 2.7.0",
     note = "It is no longer necessary to call this function."
 )]
 pub fn tls_init() -> error::Result<()> {
