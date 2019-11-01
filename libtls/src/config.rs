@@ -70,6 +70,7 @@
 //! # }
 //! ```
 //!
+//! [`Tls`]: ../tls/struct.Tls.html
 //! [`TlsConfig`]: struct.TlsConfig.html
 
 use std::ffi::{CStr, CString};
@@ -193,7 +194,7 @@ impl TlsConfig {
     ///
     /// [`tls_config_add_keypair_mem(3)`](https://man.openbsd.org/tls_config_add_keypair_mem.3)
     pub fn add_keypair_mem(&mut self, cert: &[u8], key: &[u8]) -> error::Result<()> {
-        cvt(self, (), unsafe {
+        cvt(self, unsafe {
             libtls::tls_config_add_keypair_mem(
                 self.0,
                 cert.as_ptr(),
@@ -245,7 +246,7 @@ impl TlsConfig {
         key: &[u8],
         ocsp_staple: &[u8],
     ) -> error::Result<()> {
-        cvt(self, (), unsafe {
+        cvt(self, unsafe {
             libtls::tls_config_add_keypair_ocsp_mem(
                 self.0,
                 cert.as_ptr(),
@@ -325,7 +326,7 @@ impl TlsConfig {
     /// [`add_keypair_mem`](#method.add_keypair_mem),
     /// [`tls_config_set_ca_mem(3)`](https://man.openbsd.org/tls_config_set_ca_mem.3)
     pub fn set_ca_mem(&mut self, ca: &[u8]) -> error::Result<()> {
-        cvt(self, (), unsafe {
+        cvt(self, unsafe {
             libtls::tls_config_set_ca_mem(self.0, ca.as_ptr(), ca.len())
         })
     }
@@ -339,7 +340,7 @@ impl TlsConfig {
     /// [`add_keypair_mem`](#method.add_keypair_mem.html),
     /// [`tls_config_set_ca_mem(3)`](https://man.openbsd.org/tls_config_set_ca_mem.3)
     pub fn tls_config_set_ca_mem(&mut self, ca: &[u8]) -> error::Result<()> {
-        cvt(self, (), unsafe {
+        cvt(self, unsafe {
             libtls::tls_config_set_ca_mem(self.0, ca.as_ptr(), ca.len())
         })
     }
@@ -371,7 +372,7 @@ impl TlsConfig {
     /// [`add_keypair_mem`](#method.add_keypair_mem),
     /// [`tls_config_set_cert_mem(3)`](https://man.openbsd.org/tls_config_set_cert_mem.3)
     pub fn set_cert_mem(&mut self, cert: &[u8]) -> error::Result<()> {
-        cvt(self, (), unsafe {
+        cvt(self, unsafe {
             libtls::tls_config_set_cert_mem(self.0, cert.as_ptr(), cert.len())
         })
     }
@@ -439,7 +440,7 @@ impl TlsConfig {
     /// [`add_keypair_mem`](#method.add_keypair_mem.html),
     /// [`tls_config_set_crl_mem(3)`](https://man.openbsd.org/tls_config_set_crl_mem.3)
     pub fn set_crl_mem(&mut self, crl: &[u8]) -> error::Result<()> {
-        cvt(self, (), unsafe {
+        cvt(self, unsafe {
             libtls::tls_config_set_crl_mem(self.0, crl.as_ptr(), crl.len())
         })
     }
@@ -539,7 +540,7 @@ impl TlsConfig {
     /// [`add_keypair_mem`](#method.add_keypair_mem),
     /// [`tls_config_set_key_mem(3)`](https://man.openbsd.org/tls_config_set_key_mem.3)
     pub fn set_key_mem(&mut self, key: &[u8]) -> error::Result<()> {
-        cvt(self, (), unsafe {
+        cvt(self, unsafe {
             libtls::tls_config_set_key_mem(self.0, key.as_ptr(), key.len())
         })
     }
@@ -576,7 +577,7 @@ impl TlsConfig {
     /// [`add_keypair_mem`](#method.add_keypair_mem),
     /// [`tls_config_set_keypair_mem(3)`](https://man.openbsd.org/tls_config_set_keypair_mem.3)
     pub fn set_keypair_mem(&mut self, cert: &[u8], key: &[u8]) -> error::Result<()> {
-        cvt(self, (), unsafe {
+        cvt(self, unsafe {
             libtls::tls_config_set_keypair_mem(
                 self.0,
                 cert.as_ptr(),
@@ -626,7 +627,7 @@ impl TlsConfig {
         key: &[u8],
         ocsp_staple: &[u8],
     ) -> error::Result<()> {
-        cvt(self, (), unsafe {
+        cvt(self, unsafe {
             libtls::tls_config_set_keypair_ocsp_mem(
                 self.0,
                 cert.as_ptr(),
@@ -649,7 +650,7 @@ impl TlsConfig {
     /// [`add_keypair_mem`](#method.add_keypair_mem),
     /// [`tls_config_set_ocsp_staple_mem(3)`](https://man.openbsd.org/tls_config_set_ocsp_staple_mem.3)
     pub fn set_ocsp_staple_mem(&mut self, ocsp_staple: &[u8]) -> error::Result<()> {
-        cvt(self, (), unsafe {
+        cvt(self, unsafe {
             libtls::tls_config_set_ocsp_staple_mem(self.0, ocsp_staple.as_ptr(), ocsp_staple.len())
         })
     }
@@ -728,14 +729,14 @@ impl TlsConfig {
     /// Upon a successful handshake the file will be updated with current session
     /// data, if available.  The caller is responsible for closing this file
     /// descriptor, after all [`TLS`] contexts that have been configured to use it
-    /// have been [`dropped`].
+    /// have been [dropped].
     ///
     /// # See also
     ///
     /// [`tls_config_set_session_fd(3)`](https://man.openbsd.org/tls_config_set_session_fd.3)
     ///
     /// [`Tls`]: ../tls/struct.Tls.html
-    /// [`dropped`]: ../tls/struct.Tls.html#impl-Drop
+    /// [dropped]: ../tls/struct.Tls.html#impl-Drop
     #[cfg(unix)]
     pub fn set_session_fd(&mut self, session_fd: RawFd) -> error::Result<()> {
         call_arg1(self, session_fd, libtls::tls_config_set_session_fd)
@@ -903,7 +904,7 @@ impl TlsConfig {
     ///
     /// [`tls_config_set_session_id(3)`](https://man.openbsd.org/tls_config_set_session_id.3)
     pub fn set_session_id(&mut self, session_id: &[u8]) -> error::Result<()> {
-        cvt(self, (), unsafe {
+        cvt(self, unsafe {
             libtls::tls_config_set_session_id(self.0, session_id.as_ptr(), session_id.len())
         })
     }
@@ -953,11 +954,13 @@ impl TlsConfig {
     /// [`tls_config_add_ticket_key(3)`](https://man.openbsd.org/tls_config_add_ticket_key.3)
     pub fn add_ticket_key(&mut self, keyrev: u32, key: &mut [u8]) -> error::Result<()> {
         // XXX key should be const, consider changing this in the upstream API
-        cvt(self, (), unsafe {
+        cvt(self, unsafe {
             libtls::tls_config_add_ticket_key(self.0, keyrev, key.as_mut_ptr(), key.len())
         })
     }
+}
 
+impl error::LastError for TlsConfig {
     /// Returns the configuration last error.
     ///
     /// The `last_error` method returns an error if no error occurred with config
@@ -967,8 +970,12 @@ impl TlsConfig {
     /// # See also
     ///
     /// [`tls_config_error(3)`](https://man.openbsd.org/tls_config_error.3)
-    pub fn last_error(&self) -> error::Result<String> {
+    fn last_error(&self) -> error::Result<String> {
         unsafe { cvt_no_error(libtls::tls_config_error(self.0)) }
+    }
+
+    fn to_error(errstr: String) -> error::Result<()> {
+        Err(error::TlsError::ConfigError(errstr))
     }
 }
 

@@ -81,15 +81,17 @@
 
 extern crate libtls_sys as libtls;
 
-/// TLS configuration for [`Tls`] connections.
 ///
-/// [`Tls`]: ../tls/struct.Tls.html
+/// TLS configuration for connections.
+///
 pub mod config;
 
 /// Error handling.
 pub mod error;
 
-/// TLS connections.
+///
+/// TLS connections, clients and servers.
+///
 pub mod tls;
 
 /// Helper functions.
@@ -159,15 +161,9 @@ pub use libtls::{
     TLS_TICKET_KEY_SIZE
 };
 
-/// XXX tls_read_cb
-pub type TlsReadCb = libtls::tls_read_cb;
-
-/// XXX tls_write_cb
-pub type TlsWriteCb = libtls::tls_write_cb;
-
 /// Initialize global data structures.
 ///
-/// The `tls_init` function initializes global data structures.  It is no
+/// The `init` function initializes global data structures.  It is no
 /// longer necessary to call this function directly, since it is invoked
 /// internally when needed.  It may be called more than once, and may be called
 /// concurrently.
@@ -179,6 +175,6 @@ pub type TlsWriteCb = libtls::tls_write_cb;
     since = "LibreSSL 2.7.0",
     note = "It is no longer necessary to call this function."
 )]
-pub fn tls_init() -> error::Result<()> {
+pub fn init() -> error::Result<()> {
     cvt_io((), unsafe { libtls::tls_init() })
 }

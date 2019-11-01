@@ -18,7 +18,7 @@ use std::os::raw::{c_char, c_int};
 use std::path::Path;
 
 use super::config::TlsConfig;
-use super::error::{Result, TlsError};
+use super::error::{LastError, Result, TlsError};
 
 pub fn call_file1<P: AsRef<Path>>(
     config: &mut TlsConfig,
@@ -31,7 +31,7 @@ pub fn call_file1<P: AsRef<Path>>(
     )?;
     unsafe {
         let c_file1 = CString::new(s_file1)?;
-        cvt(config, (), f(config.0, c_file1.as_ptr()))
+        cvt(config, f(config.0, c_file1.as_ptr()))
     }
 }
 
@@ -52,7 +52,7 @@ pub fn call_file2<P: AsRef<Path>>(
     unsafe {
         let c_file1 = CString::new(s_file1)?;
         let c_file2 = CString::new(s_file2)?;
-        cvt(config, (), f(config.0, c_file1.as_ptr(), c_file2.as_ptr()))
+        cvt(config, f(config.0, c_file1.as_ptr(), c_file2.as_ptr()))
     }
 }
 
@@ -86,7 +86,6 @@ pub fn call_file3<P: AsRef<Path>>(
         let c_file3 = CString::new(s_file3)?;
         cvt(
             config,
-            (),
             f(
                 config.0,
                 c_file1.as_ptr(),
@@ -104,7 +103,7 @@ pub fn call_string1(
 ) -> Result<()> {
     unsafe {
         let c_string1 = CString::new(string1)?;
-        cvt(config, (), f(config.0, c_string1.as_ptr()))
+        cvt(config, f(config.0, c_string1.as_ptr()))
     }
 }
 
@@ -113,21 +112,24 @@ pub fn call_arg1<T>(
     arg1: T,
     f: unsafe extern "C" fn(*mut libtls::tls_config, T) -> c_int,
 ) -> Result<()> {
-    cvt(config, (), unsafe { f(config.0, arg1) })
+    cvt(config, unsafe { f(config.0, arg1) })
 }
 
-pub fn cvt<T>(config: &mut TlsConfig, ok: T, retval: c_int) -> Result<T> {
+pub fn cvt<E>(object: &mut E, retval: c_int) -> Result<()>
+where
+    E: LastError,
+{
     match retval {
         -1 => {
             // Instead of storing a reference to the error context in TlsError
-            // (by storing the *mut tls_config to call tls_config_error() later),
+            // (by storing the *mut tls* to call tls_*error() later),
             // we store the actual error as a String.  This needs a bit more
             // memory but it is safe to transfer the error between threads and
-            // to use it later, even after the config is dropped.
-            let errstr = config.last_error().unwrap_or("no error".to_string());
-            Err(TlsError::ConfigError(errstr))
+            // to use it later, even after the config or TLS object is dropped.
+            let errstr = object.last_error().unwrap_or("no error".to_string());
+            E::to_error(errstr)
         }
-        _ => Ok(ok),
+        _ => Ok(()),
     }
 }
 

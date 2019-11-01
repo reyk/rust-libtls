@@ -73,3 +73,24 @@ impl From<ffi::NulError> for TlsError {
 
 /// A result type that is returning a [TlsError](enum.TlsError.html).
 pub type Result<T> = std::result::Result<T, TlsError>;
+
+/// Returns the last API error.
+///
+/// The [`Tls`] and [`TlsConfig`] structs both provide a way to return
+/// the last error as a String from the underlying API.
+///
+/// [`Tls`]: ../tls/struct.Tls.html
+/// [`TlsConfig`]: ../tls/struct.TlsConfig.html
+pub trait LastError {
+    /// Return the last error of the underlying API.
+    ///
+    /// The `last_error` method returns an error if no error occurred
+    /// at all, or if memory allocation failed while trying to assemble the
+    /// string describing the most recent error related to config.
+    fn last_error(&self) -> Result<String>;
+
+    /// Returns the error string as an error object.
+    fn to_error(errstr: String) -> Result<()> {
+        Err(TlsError::ConfigError(errstr))
+    }
+}
