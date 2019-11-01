@@ -42,11 +42,12 @@
 //! [`Tls`]: struct.Tls.html
 //! [`TlsConfig`]: ../config/struct.TlsConfig.html
 
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 use std::io;
 use std::net::ToSocketAddrs;
 use std::os::raw::c_void;
 use std::os::unix::io::{IntoRawFd, RawFd};
+use std::slice;
 use std::time::SystemTime;
 
 use super::config::TlsConfig;
@@ -577,28 +578,54 @@ impl Tls {
         cvt_time(self, unsafe { libtls::tls_peer_cert_notafter(self.0) })
     }
 
+    /// Return the PEM-encoded peer certificate.
     ///
-    ///
-    /// The `peer_cert_chain_pem` method
+    /// The `peer_cert_chain_pem` method returns a vector of memory containing a PEM-
+    /// encoded certificate chain for the peer certificate.
     ///
     /// # See also
     ///
     /// [`tls_peer_cert_chain_pem(3)`](https://man.openbsd.org/tls_peer_cert_chain_pem.3)
+    pub fn peer_cert_chain_pem(&mut self) -> error::Result<Vec<u8>> {
+        unsafe {
+            let mut size = 0;
+            let ptr = libtls::tls_peer_cert_chain_pem(self.0, &mut size);
+            if ptr.is_null() {
+                let errstr = self.last_error().unwrap_or("no error".to_string());
+                Self::to_error(errstr)
+            } else {
+                let data = slice::from_raw_parts(ptr, size);
+                Ok(data.to_vec())
+            }
+        }
+    }
 
+    /// Return the selected ALPN protocol.
     ///
-    ///
-    /// The `conn_alpn_selected` method
+    /// The `conn_alpn_selected` method returns a string that specifies the ALPN
+    /// protocol selected for use with the peer.  If no protocol
+    /// was selected then `None` is returned.
     ///
     /// # See also
     ///
     /// [`tls_conn_alpn_selected(3)`](https://man.openbsd.org/tls_conn_alpn_selected.3)
-    pub fn tls_conn_alpn_selected(&mut self) -> error::Result<String> {
-        unsafe { cvt_string(self, libtls::tls_conn_alpn_selected(self.0)) }
+    pub fn tls_conn_alpn_selected(&mut self) -> Option<String> {
+        unsafe {
+            let ptr = libtls::tls_conn_alpn_selected(self.0);
+            if ptr.is_null() {
+                None
+            } else {
+                let c_str = CStr::from_ptr(ptr);
+                let string = c_str.to_owned().to_string_lossy().to_string();
+                Some(string)
+            }
+        }
     }
 
+    /// Return the negotiated cipher suite.
     ///
-    ///
-    /// The `conn_cipher` method
+    /// The `conn_cipher` method returns a string corresponding to the cipher suite
+    /// negotiated with the peer.
     ///
     /// # See also
     ///
@@ -607,9 +634,11 @@ impl Tls {
         unsafe { cvt_string(self, libtls::tls_conn_cipher(self.0)) }
     }
 
+    /// Return the client's server name.
     ///
-    ///
-    /// The `conn_servername` method
+    /// The `conn_servername` method returns a string corresponding to the `servername`
+    /// that the client connected to the server requested by sending a TLS Server Name
+    /// Indication extension (server only).
     ///
     /// # See also
     ///
@@ -618,9 +647,11 @@ impl Tls {
         unsafe { cvt_string(self, libtls::tls_conn_servername(self.0)) }
     }
 
+    /// Check if a TLS session has been resumed.
     ///
-    ///
-    /// The `conn_session_resumed` method
+    /// The `conn_session_resumed` method indicates whether a TLS session has been
+    /// resumed during the handshake with the server connected to the client (client
+    /// only).
     ///
     /// # See also
     ///
@@ -629,9 +660,10 @@ impl Tls {
         unsafe { libtls::tls_conn_session_resumed(self.0) != 0 }
     }
 
+    /// Return the negotiated TLS version as a string.
     ///
-    ///
-    /// The `conn_version` method
+    /// The `conn_version` method returns a string corresponding to a TLS version
+    /// negotiated with the peer.
     ///
     /// # See also
     ///
@@ -640,9 +672,11 @@ impl Tls {
         unsafe { cvt_string(self, libtls::tls_conn_version(self.0)) }
     }
 
+    /// Process a raw OCSP response.
     ///
-    ///
-    /// The `ocsp_process_response` method
+    /// The `ocsp_process_response` method processes a raw OCSP response in response of
+    /// size size to check the revocation status of the peer certificate.
+    /// A successful result indicates that the certificate has not been revoked.
     ///
     /// # See also
     ///
@@ -653,9 +687,10 @@ impl Tls {
         })
     }
 
+    /// OCSP certificate status.
     ///
-    ///
-    /// The `peer_ocsp_cert_status` method
+    /// The `peer_ocsp_cert_status` method returns the OCSP certificate status code as
+    /// per RFC 6960 section 2.2.
     ///
     /// # See also
     ///
@@ -666,9 +701,10 @@ impl Tls {
         })
     }
 
+    /// OCSP certificate revocation reason. 
     ///
-    ///
-    /// The `peer_ocsp_crl_reason` method
+    /// The `peer_ocsp_crl_reason` method returns the OCSP certificate revocation reason
+    /// status code as per RFC 5280 section 5.3.1.
     ///
     /// # See also
     ///
@@ -679,9 +715,9 @@ impl Tls {
         })
     }
 
+    /// OCSP next update time.
     ///
-    ///
-    /// The `peer_ocsp_next_update` method
+    /// The `peer_ocsp_next_update` method returns the OCSP next update time.
     ///
     /// # See also
     ///
@@ -690,9 +726,10 @@ impl Tls {
         cvt_time(self, unsafe { libtls::tls_peer_ocsp_next_update(self.0) })
     }
 
+    /// OCSP response status.
     ///
-    ///
-    /// The `peer_ocsp_response_status` method
+    /// The `peer_ocsp_response_status` method returns the OCSP response status as per
+    /// RFC 6960 section 2.3.
     ///
     /// # See also
     ///
@@ -703,9 +740,13 @@ impl Tls {
         })
     }
 
+    /// Textual representation of the OCSP status code.
     ///
-    ///
-    /// The `peer_ocsp_result` method
+    /// The `peer_ocsp_result` method returns a textual representation of the OCSP
+    /// status code returned by one of the previous three functions.  If the OCSP
+    /// response was valid and the certificate was not revoked, the string
+    /// indicates the OCSP certificate status.  Otherwise, the string indicates
+    /// the OCSP certificate revocation reason or the OCSP error.
     ///
     /// # See also
     ///
@@ -714,9 +755,9 @@ impl Tls {
         unsafe { cvt_string(self, libtls::tls_peer_ocsp_result(self.0)) }
     }
 
+    /// OCSP revocation time.
     ///
-    ///
-    /// The `peer_ocsp_revocation_time` method
+    /// The `peer_ocsp_revocation_time` method returns the OCSP revocation time.
     ///
     /// # See also
     ///
@@ -727,9 +768,9 @@ impl Tls {
         })
     }
 
+    /// OCSP this update time.
     ///
-    ///
-    /// The `peer_ocsp_this_update` method
+    /// The `peer_ocsp_this_update` method returns the OCSP this update time. 
     ///
     /// # See also
     ///
@@ -738,9 +779,10 @@ impl Tls {
         cvt_time(self, unsafe { libtls::tls_peer_ocsp_this_update(self.0) })
     }
 
+    /// OCSP validation URL.
     ///
-    ///
-    /// The `peer_ocsp_url` method
+    /// The `peer_ocsp_url` method returns the URL for OCSP validation of the peer
+    /// certificate.
     ///
     /// # See also
     ///
