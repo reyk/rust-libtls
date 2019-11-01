@@ -46,9 +46,10 @@ use std::ffi::CString;
 use std::io;
 use std::net::ToSocketAddrs;
 use std::os::raw::c_void;
+use std::time::SystemTime;
 
 #[cfg(unix)]
-use std::os::unix::io::RawFd;
+use std::os::unix::io::{IntoRawFd, RawFd};
 
 use super::config::TlsConfig;
 use super::error::{LastError, Result};
@@ -138,7 +139,7 @@ impl Tls {
         unsafe { libtls::tls_reset(self.0) };
     }
 
-    /// Accept a new client connection on a pair of existing file descriptors.
+    /// Accept a new TLS connection on a pair of existing file descriptors.
     ///
     /// The `accept_fds` method can accept a new client connection on a pair
     /// of existing file descriptors.
@@ -146,6 +147,7 @@ impl Tls {
     /// # See also
     ///
     /// [`tls_accept_fds(3)`](https://man.openbsd.org/tls_accept_fds.3)
+    #[cfg(unix)]
     pub fn accept_fds(&mut self, fd_read: RawFd, fd_write: RawFd) -> Result<Tls> {
         unsafe {
             // XXX Make sure that this pointer handling is correct!
@@ -158,7 +160,7 @@ impl Tls {
         }
     }
 
-    /// Accept a new client connection on a socket.
+    /// Accept a new TLS connection on a socket.
     ///
     /// The `accept_socket` method can accept a new client
     /// connection on an already established
@@ -166,7 +168,9 @@ impl Tls {
     ///
     /// # See also
     ///
+    /// [`accept_raw_fd`](#method.accept_raw_fd)
     /// [`tls_accept_socket(3)`](https://man.openbsd.org/tls_accept_socket.3)
+    #[cfg(unix)]
     pub fn accept_socket(&mut self, socket: RawFd) -> Result<Tls> {
         unsafe {
             // XXX Make sure that this pointer handling is correct!
@@ -176,7 +180,29 @@ impl Tls {
         }
     }
 
-    /// Accept a new client connection with custom I/O callbacks.
+    /// Accept a new TLS connection on an established connection.
+    ///
+    /// The `accept_raw_fd` method can accept a new client connection on an
+    /// already established connection that implements the [`IntoRawFd`] trait,
+    /// e.g. [`TcpStream`].
+    /// It is a wrapper function on top of [`accept_socket`].
+    ///
+    /// # See also
+    ///
+    /// [`accept_socket`]
+    ///
+    /// [`accept_socket`]: #method.accept_socket
+    /// [`TcpStream`]: https://doc.rust-lang.org/std/net/TcpStream.html
+    /// [`IntoRawFd`]: https://doc.rust-lang.org/std/os/unix/io/IntoRawFd.html
+    #[cfg(unix)]
+    pub fn accept_raw_fd<T>(&mut self, raw_fd: T) -> Result<Tls>
+    where
+        T: IntoRawFd,
+    {
+        self.accept_socket(raw_fd.into_raw_fd())
+    }
+
+    /// Accept a new TLS connection with custom I/O callbacks.
     ///
     /// The `accept_cbs` method allows read and write callback functions to
     /// handle data transfers.  The specified `cb_arg` parameter is passed back to
@@ -201,7 +227,7 @@ impl Tls {
         Ok(cctx.into())
     }
 
-    /// Initiate a new client connection.
+    /// Initiate a new TLS connection.
     ///
     /// The `connect` method initiates a new client connection on a
     /// [`Tls`] object that has been configured with [`configure`].
@@ -230,56 +256,136 @@ impl Tls {
         }
     }
 
-    //
-    //
-    // The `connect_fds` method
-    //
-    // # See also
-    //
-    // [`tls_connect_fds(3)`](https://man.openbsd.org/tls_connect_fds.3)
+    /// Initiate a new TLS connection over a pair of existing file descriptors.
+    ///
+    /// The `connect_fds` method is a variant of [`connect`] that
+    /// establishes a secure connection over a pair of existing file
+    /// descriptors.  The `servername` argument is used for verification of
+    /// the TLS server name.
+    ///
+    /// # See also
+    ///
+    /// [`tls_connect_fds(3)`](https://man.openbsd.org/tls_connect_fds.3)
+    ///
+    /// [`connect`]: #method.connect
+    #[cfg(unix)]
+    pub fn connect_fds(&mut self, fd_read: RawFd, fd_write: RawFd, servername: &str) -> Result<()> {
+        unsafe {
+            let c_servername = CString::new(servername)?;
+            cvt(
+                self,
+                libtls::tls_connect_fds(self.0, fd_read, fd_write, c_servername.as_ptr()),
+            )
+        }
+    }
 
+    /// Initiate a new TLS connection with a specified server name.
     ///
-    ///
-    /// The `connect_servername` method
+    /// The `connect_servername` method has the same behaviour as [`connect`],
+    /// however the name to use for verification is explicitly provided,
+    /// for the case where the TLS server name differs from the DNS name.
     ///
     /// # See also
     ///
     /// [`tls_connect_servername(3)`](https://man.openbsd.org/tls_connect_servername.3)
-    pub fn _connect_servername<A: ToSocketAddrs>(
+    ///
+    /// [`connect`]: #method.connect
+    pub fn connect_servername<A: ToSocketAddrs>(
         &mut self,
-        _addrs: A,
-        _servername: &str,
+        host: A,
+        servername: &str,
     ) -> Result<()> {
-        /* XXX
-            let mut addr_iter = addrs.to_socket_addrs()?;
+        let mut addr_iter = host.to_socket_addrs()?;
 
+        // Get the first address in the list (only one is supported)
         let addr = match addr_iter.next() {
             None => return Self::to_error("no address to connect to".to_owned()),
             Some(addr) => addr,
         };
-            if let Some(_) = addr_iter.next() {
-                return Self::to_error("connect takes a single address".to_owned());
-            }
-         */
 
-        Ok(())
+        unsafe {
+            let c_host = CString::new(addr.to_string())?;
+            let c_servername = CString::new(servername)?;
+            cvt(
+                self,
+                libtls::tls_connect_servername(
+                    self.0,
+                    c_host.as_ptr(),
+                    std::ptr::null(),
+                    c_servername.as_ptr(),
+                ),
+            )
+        }
     }
 
-    //
-    //
-    // The `connect_socket` method
-    //
-    // # See also
-    //
-    // [`tls_connect_socket(3)`](https://man.openbsd.org/tls_connect_socket.3)
+    /// Initiate a new TLS connection over an established socket.
+    ///
+    /// The `connect_socket` method is a variant of [`connect_servername`] that
+    /// can upgrade an already existing socket to TLS.
+    ///
+    /// # See also
+    ///
+    /// [`tls_connect_socket(3)`](https://man.openbsd.org/tls_connect_socket.3)
+    ///
+    /// [`connect_servername`]: #method.connect_servername
+    #[cfg(unix)]
+    pub fn connect_socket(&mut self, socket: RawFd, servername: &str) -> Result<()> {
+        unsafe {
+            let c_servername = CString::new(servername)?;
+            cvt(
+                self,
+                libtls::tls_connect_socket(self.0, socket, c_servername.as_ptr()),
+            )
+        }
+    }
 
-    //
-    //
-    // The `connect_cbs` method
-    //
-    // # See also
-    //
-    // [`tls_connect_cbs(3)`](https://man.openbsd.org/tls_connect_cbs.3)
+    /// Initiate a new TLS connection over an established connection.
+    ///
+    /// The `connect_raw_fd` method can upgrade a connection to TLS on an
+    /// already established connection that implements the [`IntoRawFd`] trait,
+    /// e.g. [`TcpStream`].
+    /// It is a wrapper function on top of [`connect_socket`].
+    ///
+    /// # See also
+    ///
+    /// [`connect_socket`]
+    ///
+    /// [`connect_socket`]: #method.connect_socket
+    /// [`TcpStream`]: https://doc.rust-lang.org/std/net/TcpStream.html
+    /// [`IntoRawFd`]: https://doc.rust-lang.org/std/os/unix/io/IntoRawFd.html
+    #[cfg(unix)]
+    pub fn connect_raw_fd<T>(&mut self, raw_fd: T, servername: &str) -> Result<()>
+    where
+        T: IntoRawFd,
+    {
+        self.connect_socket(raw_fd.into_raw_fd(), servername)
+    }
+
+    /// Initiate a new TLS connection with custom I/O callbacks.
+    ///
+    /// The `connect_cbs` method allows read and write callback functions to
+    /// handle data transfers.  The specified `cb_arg` parameter is passed back to
+    /// the functions, and can contain a pointer to any caller-specified data.
+    /// The `servername` is used to validate the TLS server name.
+    ///
+    /// # See also
+    ///
+    /// [`tls_connect_cbs(3)`](https://man.openbsd.org/tls_connect_cbs.3)
+    pub unsafe fn connect_cbs(
+        &mut self,
+        read_cb: TlsReadCb,
+        write_cb: TlsWriteCb,
+        cb_arg: Option<*mut c_void>,
+        servername: &str,
+    ) -> Result<()> {
+        // XXX Make sure that this pointer handling is correct!
+        let c_servername = CString::new(servername)?;
+        let cb_arg = cb_arg.unwrap_or(std::ptr::null_mut());
+        cvt(
+            self,
+            libtls::tls_connect_cbs(self.0, read_cb, write_cb, cb_arg, c_servername.as_ptr()),
+        )
+    }
 
     //
     //
@@ -312,6 +418,9 @@ impl Tls {
     // # See also
     //
     // [`tls_close(3)`](https://man.openbsd.org/tls_close.3)
+    pub fn close(&mut self) -> error::Result<()> {
+        cvt(self, unsafe { libtls::tls_close(self.0) })
+    }
 
     //
     //
@@ -320,6 +429,9 @@ impl Tls {
     // # See also
     //
     // [`tls_peer_cert_provided(3)`](https://man.openbsd.org/tls_peer_cert_provided.3)
+    pub fn peer_cert_provided(&mut self) -> error::Result<()> {
+        cvt(self, unsafe { libtls::tls_peer_cert_provided(self.0) })
+    }
 
     //
     //
@@ -360,6 +472,9 @@ impl Tls {
     // # See also
     //
     // [`tls_peer_cert_notbefore(3)`](https://man.openbsd.org/tls_peer_cert_notbefore.3)
+    pub fn peer_cert_notbefore(&mut self) -> error::Result<SystemTime> {
+        cvt_time(self, unsafe { libtls::tls_peer_cert_notbefore(self.0) })
+    }
 
     //
     //
@@ -368,6 +483,9 @@ impl Tls {
     // # See also
     //
     // [`tls_peer_cert_notafter(3)`](https://man.openbsd.org/tls_peer_cert_notafter.3)
+    pub fn peer_cert_notafter(&mut self) -> error::Result<SystemTime> {
+        cvt_time(self, unsafe { libtls::tls_peer_cert_notafter(self.0) })
+    }
 
     //
     //
@@ -408,6 +526,9 @@ impl Tls {
     // # See also
     //
     // [`tls_conn_session_resumed(3)`](https://man.openbsd.org/tls_conn_session_resumed.3)
+    pub fn conn_session_resumed(&mut self) -> error::Result<()> {
+        cvt(self, unsafe { libtls::tls_conn_session_resumed(self.0) })
+    }
 
     //
     //
@@ -432,6 +553,9 @@ impl Tls {
     // # See also
     //
     // [`tls_peer_ocsp_cert_status(3)`](https://man.openbsd.org/tls_peer_ocsp_cert_status.3)
+    pub fn peer_ocsp_cert_status(&mut self) -> error::Result<()> {
+        cvt(self, unsafe { libtls::tls_peer_ocsp_cert_status(self.0) })
+    }
 
     //
     //
@@ -440,6 +564,9 @@ impl Tls {
     // # See also
     //
     // [`tls_peer_ocsp_crl_reason(3)`](https://man.openbsd.org/tls_peer_ocsp_crl_reason.3)
+    pub fn peer_ocsp_crl_reason(&mut self) -> error::Result<()> {
+        cvt(self, unsafe { libtls::tls_peer_ocsp_crl_reason(self.0) })
+    }
 
     //
     //
@@ -448,6 +575,9 @@ impl Tls {
     // # See also
     //
     // [`tls_peer_ocsp_next_update(3)`](https://man.openbsd.org/tls_peer_ocsp_next_update.3)
+    pub fn peer_ocsp_next_update(&mut self) -> error::Result<SystemTime> {
+        cvt_time(self, unsafe { libtls::tls_peer_ocsp_next_update(self.0) })
+    }
 
     //
     //
@@ -456,6 +586,11 @@ impl Tls {
     // # See also
     //
     // [`tls_peer_ocsp_response_status(3)`](https://man.openbsd.org/tls_peer_ocsp_response_status.3)
+    pub fn peer_ocsp_response_status(&mut self) -> error::Result<()> {
+        cvt(self, unsafe {
+            libtls::tls_peer_ocsp_response_status(self.0)
+        })
+    }
 
     //
     //
@@ -472,6 +607,11 @@ impl Tls {
     // # See also
     //
     // [`tls_peer_ocsp_revocation_time(3)`](https://man.openbsd.org/tls_peer_ocsp_revocation_time.3)
+    pub fn peer_ocsp_revocation_time(&mut self) -> error::Result<SystemTime> {
+        cvt_time(self, unsafe {
+            libtls::tls_peer_ocsp_revocation_time(self.0)
+        })
+    }
 
     //
     //
@@ -480,6 +620,9 @@ impl Tls {
     // # See also
     //
     // [`tls_peer_ocsp_this_update(3)`](https://man.openbsd.org/tls_peer_ocsp_this_update.3)
+    pub fn peer_ocsp_this_update(&mut self) -> error::Result<SystemTime> {
+        cvt_time(self, unsafe { libtls::tls_peer_ocsp_this_update(self.0) })
+    }
 
     //
     //
@@ -506,7 +649,7 @@ impl LastError for Tls {
         unsafe { cvt_no_error(libtls::tls_error(self.0)) }
     }
 
-    fn to_error(errstr: String) -> error::Result<()> {
+    fn to_error<T>(errstr: String) -> error::Result<T> {
         Err(error::TlsError::CtxError(errstr))
     }
 }

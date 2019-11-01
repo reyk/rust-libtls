@@ -12,10 +12,14 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
+use std::convert::TryInto;
 use std::ffi::{CStr, CString};
 use std::io;
 use std::os::raw::{c_char, c_int};
 use std::path::Path;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+use libtls::time_t;
 
 use super::config::TlsConfig;
 use super::error::{LastError, Result, TlsError};
@@ -130,6 +134,23 @@ where
             E::to_error(errstr)
         }
         _ => Ok(()),
+    }
+}
+
+pub fn cvt_time<E>(object: &mut E, itime: time_t) -> Result<SystemTime>
+where
+    E: LastError,
+{
+    match itime {
+        -1 => {
+            let errstr = object.last_error().unwrap_or("no error".to_string());
+            E::to_error(errstr)
+        }
+        _ => {
+            let utime: u64 = itime.try_into()?;
+            let time: SystemTime = UNIX_EPOCH + Duration::from_secs(utime);
+            Ok(time)
+        }
     }
 }
 

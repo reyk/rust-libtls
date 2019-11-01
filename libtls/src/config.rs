@@ -75,8 +75,8 @@
 
 use std::ffi::{CStr, CString};
 use std::io;
-use std::path::{Path, PathBuf};
 use std::marker::{Send, Sync};
+use std::path::{Path, PathBuf};
 
 #[cfg(unix)]
 use std::os::unix::io::RawFd;
@@ -974,7 +974,7 @@ impl error::LastError for TlsConfig {
         unsafe { cvt_no_error(libtls::tls_config_error(self.0)) }
     }
 
-    fn to_error(errstr: String) -> error::Result<()> {
+    fn to_error<T>(errstr: String) -> error::Result<T> {
         Err(error::TlsError::ConfigError(errstr))
     }
 }

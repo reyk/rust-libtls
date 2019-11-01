@@ -15,6 +15,7 @@
 use std::ffi;
 use std::fmt;
 use std::io;
+use std::num;
 
 /// An error returned by [`Tls`] and [`TlsConfig`] methods.
 ///
@@ -71,6 +72,12 @@ impl From<ffi::NulError> for TlsError {
     }
 }
 
+impl From<num::TryFromIntError> for TlsError {
+    fn from(err: num::TryFromIntError) -> Self {
+        TlsError::IoError(io::Error::new(io::ErrorKind::Other, err))
+    }
+}
+
 /// A result type that is returning a [TlsError](enum.TlsError.html).
 pub type Result<T> = std::result::Result<T, TlsError>;
 
@@ -90,7 +97,7 @@ pub trait LastError {
     fn last_error(&self) -> Result<String>;
 
     /// Returns the error string as an error object.
-    fn to_error(errstr: String) -> Result<()> {
+    fn to_error<T>(errstr: String) -> Result<T> {
         Err(TlsError::ConfigError(errstr))
     }
 }
