@@ -4,8 +4,11 @@ version = "0.1.1"
 authors = ["Reyk Floeter <contact@reykfloeter.com>"]
 edition = "2018"
 license = "ISC"
+readme = "README.md"
 description = "Rust bindings for LibreSSL's libtls library."
 repository = "https://github.com/reyk/rust-libtls"
+categories = ["cryptography", "api-bindings"]
+keywords = ["crypto", "tls", "ssl", "libressl", "openbsd"]
 
 [badges]
 travis-ci = { repository = "reyk/rust-libtls", branch = "master" }

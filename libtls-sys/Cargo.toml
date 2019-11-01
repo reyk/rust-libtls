@@ -3,10 +3,14 @@ name = "libtls-sys"
 version = "0.1.1"
 authors = ["Reyk Floeter <contact@reykfloeter.com>"]
 edition = "2018"
-build = "build.rs"
-description = "Rust bindings for LibreSSL's libtls library."
+license = "ISC"
+readme = "README.md"
+description = "FFI bindings for LibreSSL's libtls library."
 repository = "https://github.com/reyk/rust-libtls"
+categories = ["cryptography", "external-ffi-bindings"]
+keywords = ["libressl", "openbsd"]
 links = "libtls"
+build = "build.rs"
 
 [badges]
 travis-ci = { repository = "reyk/rust-libtls", branch = "master" }
