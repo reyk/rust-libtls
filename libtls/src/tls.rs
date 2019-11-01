@@ -46,10 +46,8 @@ use std::ffi::CString;
 use std::io;
 use std::net::ToSocketAddrs;
 use std::os::raw::c_void;
-use std::time::SystemTime;
-
-#[cfg(unix)]
 use std::os::unix::io::{IntoRawFd, RawFd};
+use std::time::SystemTime;
 
 use super::config::TlsConfig;
 use super::error::{LastError, Result};
@@ -83,7 +81,7 @@ use super::*;
 /// [`close`]: struct.Tls.html#method.close
 /// [`reset`]: struct.Tls.html#method.reset
 /// [dropped]: struct.Tls.html#impl-Drop
-pub struct Tls(*mut libtls::tls);
+pub struct Tls(*mut libtls::tls, Option<RawFd>);
 
 impl Tls {
     fn new(f: unsafe extern "C" fn() -> *mut libtls::tls) -> io::Result<Self> {
@@ -91,7 +89,7 @@ impl Tls {
         if tls.is_null() {
             Err(io::Error::last_os_error())
         } else {
-            Ok(Tls(tls))
+            Ok(Tls(tls, None))
         }
     }
 
@@ -117,14 +115,18 @@ impl Tls {
         Self::new(libtls::tls_server)
     }
 
+    /// Configure the TLS context.
     ///
-    ///
-    /// The `configure` method
+    /// The `configure` method configures a TLS connection.  The
+    /// same [`TlsConfig`] object can be used to configure multiple
+    /// contexts.
     ///
     /// # See also
     ///
     /// [`tls_configure(3)`](https://man.openbsd.org/tls_configure.3)
-    pub fn configure(&mut self, config: &mut TlsConfig) -> Result<()> {
+    ///
+    /// [`TlsConfig`]: ../config/struct.TlsConfig.html
+    pub fn configure(&mut self, config: &TlsConfig) -> Result<()> {
         cvt(self, unsafe { libtls::tls_configure(self.0, config.0) })
     }
 
@@ -147,7 +149,6 @@ impl Tls {
     /// # See also
     ///
     /// [`tls_accept_fds(3)`](https://man.openbsd.org/tls_accept_fds.3)
-    #[cfg(unix)]
     pub fn accept_fds(&mut self, fd_read: RawFd, fd_write: RawFd) -> Result<Tls> {
         unsafe {
             // XXX Make sure that this pointer handling is correct!
@@ -168,9 +169,8 @@ impl Tls {
     ///
     /// # See also
     ///
-    /// [`accept_raw_fd`](#method.accept_raw_fd)
+    /// [`accept_io`](#method.accept_io)
     /// [`tls_accept_socket(3)`](https://man.openbsd.org/tls_accept_socket.3)
-    #[cfg(unix)]
     pub fn accept_socket(&mut self, socket: RawFd) -> Result<Tls> {
         unsafe {
             // XXX Make sure that this pointer handling is correct!
@@ -182,7 +182,7 @@ impl Tls {
 
     /// Accept a new TLS connection on an established connection.
     ///
-    /// The `accept_raw_fd` method can accept a new client connection on an
+    /// The `accept_io` method can accept a new client connection on an
     /// already established connection that implements the [`IntoRawFd`] trait,
     /// e.g. [`TcpStream`].
     /// It is a wrapper function on top of [`accept_socket`].
@@ -194,12 +194,13 @@ impl Tls {
     /// [`accept_socket`]: #method.accept_socket
     /// [`TcpStream`]: https://doc.rust-lang.org/std/net/TcpStream.html
     /// [`IntoRawFd`]: https://doc.rust-lang.org/std/os/unix/io/IntoRawFd.html
-    #[cfg(unix)]
-    pub fn accept_raw_fd<T>(&mut self, raw_fd: T) -> Result<Tls>
+    pub fn accept_io<T>(&mut self, raw_fd: T) -> Result<Tls>
     where
         T: IntoRawFd,
     {
-        self.accept_socket(raw_fd.into_raw_fd())
+        // Store fd to close it automatically when dropping the object
+        self.1 = Some(raw_fd.into_raw_fd());
+        self.accept_socket(self.1.unwrap())
     }
 
     /// Accept a new TLS connection with custom I/O callbacks.
@@ -268,7 +269,6 @@ impl Tls {
     /// [`tls_connect_fds(3)`](https://man.openbsd.org/tls_connect_fds.3)
     ///
     /// [`connect`]: #method.connect
-    #[cfg(unix)]
     pub fn connect_fds(&mut self, fd_read: RawFd, fd_write: RawFd, servername: &str) -> Result<()> {
         unsafe {
             let c_servername = CString::new(servername)?;
@@ -328,7 +328,6 @@ impl Tls {
     /// [`tls_connect_socket(3)`](https://man.openbsd.org/tls_connect_socket.3)
     ///
     /// [`connect_servername`]: #method.connect_servername
-    #[cfg(unix)]
     pub fn connect_socket(&mut self, socket: RawFd, servername: &str) -> Result<()> {
         unsafe {
             let c_servername = CString::new(servername)?;
@@ -341,7 +340,7 @@ impl Tls {
 
     /// Initiate a new TLS connection over an established connection.
     ///
-    /// The `connect_raw_fd` method can upgrade a connection to TLS on an
+    /// The `connect_io` method can upgrade a connection to TLS on an
     /// already established connection that implements the [`IntoRawFd`] trait,
     /// e.g. [`TcpStream`].
     /// It is a wrapper function on top of [`connect_socket`].
@@ -353,12 +352,13 @@ impl Tls {
     /// [`connect_socket`]: #method.connect_socket
     /// [`TcpStream`]: https://doc.rust-lang.org/std/net/TcpStream.html
     /// [`IntoRawFd`]: https://doc.rust-lang.org/std/os/unix/io/IntoRawFd.html
-    #[cfg(unix)]
-    pub fn connect_raw_fd<T>(&mut self, raw_fd: T, servername: &str) -> Result<()>
+    pub fn connect_io<T>(&mut self, raw_fd: T, servername: &str) -> Result<()>
     where
         T: IntoRawFd,
     {
-        self.connect_socket(raw_fd.into_raw_fd(), servername)
+        // Store fd to close it automatically when dropping the object
+        self.1 = Some(raw_fd.into_raw_fd());
+        self.connect_socket(self.1.unwrap(), servername)
     }
 
     /// Initiate a new TLS connection with custom I/O callbacks.
@@ -387,250 +387,367 @@ impl Tls {
         )
     }
 
-    //
-    //
-    // The `handshake` method
-    //
-    // # See also
-    //
-    // [`tls_handshake(3)`](https://man.openbsd.org/tls_handshake.3)
-
-    //
-    //
-    // The `read` method
-    //
-    // # See also
-    //
-    // [`tls_read(3)`](https://man.openbsd.org/tls_read.3)
-
-    //
-    //
-    // The `write` method
-    //
-    // # See also
-    //
-    // [`tls_write(3)`](https://man.openbsd.org/tls_write.3)
-
-    //
-    //
-    // The `close` method
-    //
-    // # See also
-    //
-    // [`tls_close(3)`](https://man.openbsd.org/tls_close.3)
-    pub fn close(&mut self) -> error::Result<()> {
-        cvt(self, unsafe { libtls::tls_close(self.0) })
+    /// Explicitly perform the TLS handshake.
+    ///
+    /// The `handshake` method explicitly performs the TLS handshake.  It is only
+    /// necessary to call this method if you need to guarantee that the
+    /// handshake has completed, as both [`read`] and [`write`] automatically
+    /// perform the TLS handshake when necessary.
+    ///
+    /// The [`read`], [`write`], `handshake`, and [`close`] methods return
+    /// -1 on error and also have two special return values:
+    ///
+    /// * [`TLS_WANT_POLLIN`]: The underlying read file descriptor needs to be
+    ///   readable in order to continue.
+    /// * [`TLS_WANT_POLLOUT`]: The underlying write file descriptor needs to be
+    ///   writeable in order to continue.
+    ///
+    /// In the case of blocking file descriptors, the same function call should
+    /// be repeated immediately.  In the case of non-blocking file descriptors,
+    /// the same function call should be repeated when the required condition has
+    /// been met.
+    ///
+    /// On success, the [`read`] and [`write`] methods return a size and
+    /// the `handshake` and [`close`] methods return 0.
+    ///
+    /// # See also
+    ///
+    /// [`tls_handshake(3)`](https://man.openbsd.org/tls_handshake.3)
+    ///
+    /// [`read`]: #method.read
+    /// [`write`]: #method.write
+    /// [`close`]: #method.close
+    /// [`TLS_WANT_POLLIN`]: ../constant.TLS_WANT_POLLIN.html
+    /// [`TLS_WANT_POLLOUT`]: ../constant.TLS_WANT_POLLOUT.html
+    pub fn handshake(&mut self) -> error::Result<isize> {
+        cvt_err(self, unsafe { libtls::tls_handshake(self.0) as isize })
     }
 
-    //
-    //
-    // The `peer_cert_provided` method
-    //
-    // # See also
-    //
-    // [`tls_peer_cert_provided(3)`](https://man.openbsd.org/tls_peer_cert_provided.3)
-    pub fn peer_cert_provided(&mut self) -> error::Result<()> {
-        cvt(self, unsafe { libtls::tls_peer_cert_provided(self.0) })
+    /// Read bytes from the TLS connection.
+    ///
+    /// The `read` method reads bytes of data from the connection into `buf`.  It
+    /// returns the amount of data read or an error as described in [`handshake`].
+    ///
+    /// # See also
+    ///
+    /// [`handshake`],
+    /// [`tls_read(3)`](https://man.openbsd.org/tls_read.3)
+    ///
+    /// [`handshake`]: #method.handshake
+    pub fn read(&mut self, buf: &mut [u8]) -> error::Result<isize> {
+        cvt_err(self, unsafe {
+            libtls::tls_read(self.0, buf.as_mut_ptr() as *mut c_void, buf.len())
+        })
     }
 
-    //
-    //
-    // The `peer_cert_contains_name` method
-    //
-    // # See also
-    //
-    // [`tls_peer_cert_contains_name(3)`](https://man.openbsd.org/tls_peer_cert_contains_name.3)
+    /// Write bytes to the TLS connection.
+    ///
+    /// The `write` method writes bytes of data from `buf` to connection.  It
+    /// returns the amount of data written or an error as described in [`handshake`].
+    ///
+    /// # See also
+    ///
+    /// [`handshake`],
+    /// [`tls_write(3)`](https://man.openbsd.org/tls_write.3)
+    ///
+    /// [`handshake`]: #method.handshake
+    pub fn write(&mut self, buf: &[u8]) -> error::Result<isize> {
+        cvt_err(self, unsafe {
+            libtls::tls_write(self.0, buf.as_ptr() as *const c_void, buf.len())
+        })
+    }
 
-    //
-    //
-    // The `peer_cert_hash` method
-    //
-    // # See also
-    //
-    // [`tls_peer_cert_hash(3)`](https://man.openbsd.org/tls_peer_cert_hash.3)
+    /// Close the connection.
+    ///
+    /// The `close` method closes a connection after use.  Only the TLS layer will be
+    /// shut down and __the caller is responsible for closing the file descriptors,
+    /// unless the connection was established using [`connect`] or
+    /// [`connect_servername`]__.
+    ///
+    /// It returns 0 on success or an error as decribed in [`handshake`].
+    ///
+    /// # See also
+    ///
+    /// [`handshake`],
+    /// [`tls_write(3)`](https://man.openbsd.org/tls_write.3)
+    ///
+    /// [`handshake`]: #method.handshake
+    /// [`connect`]: #method.connect
+    /// [`connect_servername`]: #method.connect_servername
+    pub fn close(&mut self) -> error::Result<isize> {
+        cvt_err(self, unsafe { libtls::tls_close(self.0) as isize })
+    }
 
-    //
-    //
-    // The `peer_cert_issuer` method
-    //
-    // # See also
-    //
-    // [`tls_peer_cert_issuer(3)`](https://man.openbsd.org/tls_peer_cert_issuer.3)
+    /// Check for peer certificate.
+    ///
+    /// The `peer_cert_provided` methods checks if the peer has provided a
+    /// certificate.
+    ///
+    /// # See also
+    ///
+    /// [`tls_peer_cert_provided(3)`](https://man.openbsd.org/tls_peer_cert_provided.3)
+    pub fn peer_cert_provided(&mut self) -> bool {
+        unsafe { libtls::tls_peer_cert_provided(self.0) != 0 }
+    }
 
-    //
-    //
-    // The `peer_cert_subject` method
-    //
-    // # See also
-    //
-    // [`tls_peer_cert_subject(3)`](https://man.openbsd.org/tls_peer_cert_subject.3)
+    /// Check if the peer certificate includes a matching name.
+    ///
+    /// The `peer_cert_contains_name` method checks if the peer has
+    /// provided a certificate that contains a SAN or CN that matches name.
+    ///
+    /// # See also
+    ///
+    /// [`tls_peer_cert_contains_name(3)`](https://man.openbsd.org/tls_peer_cert_contains_name.3)
+    pub fn peer_cert_contains_name(&mut self, name: &str) -> Result<bool> {
+        unsafe {
+            let c_name = CString::new(name)?;
+            Ok(libtls::tls_peer_cert_contains_name(self.0, c_name.as_ptr()) != 0)
+        }
+    }
 
-    //
-    //
-    // The `peer_cert_notbefore` method
-    //
-    // # See also
-    //
-    // [`tls_peer_cert_notbefore(3)`](https://man.openbsd.org/tls_peer_cert_notbefore.3)
+    /// Return hash of the peer certificate.
+    ///
+    /// The `peer_cert_hash` method returns a string corresponding to a hash
+    /// of the raw peer certificate prefixed by a hash name followed by a colon.
+    /// The hash currently used is SHA256, though this could change in the
+    /// future.
+    ///
+    /// The hash string for a certificate in file `mycert.crt` can be
+    /// generated using the commands:
+    ///
+    /// ```sh
+    /// h=$(openssl x509 -outform der -in mycert.crt | sha256)
+    /// printf "SHA256:${h}\n"
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// [`tls_peer_cert_hash(3)`](https://man.openbsd.org/tls_peer_cert_hash.3)
+    pub fn peer_cert_hash(&mut self) -> error::Result<String> {
+        unsafe { cvt_string(self, libtls::tls_peer_cert_hash(self.0)) }
+    }
+
+    /// Return the issuer of the peer certificate.
+    ///
+    /// The `peer_cert_issuer` method returns a string corresponding to the issuer of
+    /// the peer certificate.
+    ///
+    /// # See also
+    ///
+    /// [`tls_peer_cert_issuer(3)`](https://man.openbsd.org/tls_peer_cert_issuer.3)
+    pub fn peer_cert_issuer(&mut self) -> error::Result<String> {
+        unsafe { cvt_string(self, libtls::tls_peer_cert_issuer(self.0)) }
+    }
+
+    /// Return the subject of the peer certificate.
+    ///
+    /// The `peer_cert_subject` method returns a string corresponding to the subject of
+    /// the peer certificate.
+    ///
+    /// # See also
+    ///
+    /// [`tls_peer_cert_subject(3)`](https://man.openbsd.org/tls_peer_cert_subject.3)
+    pub fn peer_cert_subject(&mut self) -> error::Result<String> {
+        unsafe { cvt_string(self, libtls::tls_peer_cert_subject(self.0)) }
+    }
+
+    /// Return the start of the validity period of the peer certififcate.
+    ///
+    /// The `peer_cert_notbefore` method returns the time corresponding to the start of
+    /// the validity period of the peer certificate.
+    ///
+    /// # See also
+    ///
+    /// [`tls_peer_cert_notbefore(3)`](https://man.openbsd.org/tls_peer_cert_notbefore.3)
     pub fn peer_cert_notbefore(&mut self) -> error::Result<SystemTime> {
         cvt_time(self, unsafe { libtls::tls_peer_cert_notbefore(self.0) })
     }
 
-    //
-    //
-    // The `peer_cert_notafter` method
-    //
-    // # See also
-    //
-    // [`tls_peer_cert_notafter(3)`](https://man.openbsd.org/tls_peer_cert_notafter.3)
+    /// Return the end of the validity period of the peer certififcate.
+    ///
+    /// The `peer_cert_notafter` method returns the time corresponding to the end of
+    /// the validity period of the peer certificate.
+    ///
+    /// The `peer_cert_notafter` method
+    ///
+    /// # See also
+    ///
+    /// [`tls_peer_cert_notafter(3)`](https://man.openbsd.org/tls_peer_cert_notafter.3)
     pub fn peer_cert_notafter(&mut self) -> error::Result<SystemTime> {
         cvt_time(self, unsafe { libtls::tls_peer_cert_notafter(self.0) })
     }
 
-    //
-    //
-    // The `peer_cert_chain_pem` method
-    //
-    // # See also
-    //
-    // [`tls_peer_cert_chain_pem(3)`](https://man.openbsd.org/tls_peer_cert_chain_pem.3)
+    ///
+    ///
+    /// The `peer_cert_chain_pem` method
+    ///
+    /// # See also
+    ///
+    /// [`tls_peer_cert_chain_pem(3)`](https://man.openbsd.org/tls_peer_cert_chain_pem.3)
 
-    //
-    //
-    // The `conn_alpn_selected` method
-    //
-    // # See also
-    //
-    // [`tls_conn_alpn_selected(3)`](https://man.openbsd.org/tls_conn_alpn_selected.3)
-
-    //
-    //
-    // The `conn_cipher` method
-    //
-    // # See also
-    //
-    // [`tls_conn_cipher(3)`](https://man.openbsd.org/tls_conn_cipher.3)
-
-    //
-    //
-    // The `conn_servername` method
-    //
-    // # See also
-    //
-    // [`tls_conn_servername(3)`](https://man.openbsd.org/tls_conn_servername.3)
-
-    //
-    //
-    // The `conn_session_resumed` method
-    //
-    // # See also
-    //
-    // [`tls_conn_session_resumed(3)`](https://man.openbsd.org/tls_conn_session_resumed.3)
-    pub fn conn_session_resumed(&mut self) -> error::Result<()> {
-        cvt(self, unsafe { libtls::tls_conn_session_resumed(self.0) })
+    ///
+    ///
+    /// The `conn_alpn_selected` method
+    ///
+    /// # See also
+    ///
+    /// [`tls_conn_alpn_selected(3)`](https://man.openbsd.org/tls_conn_alpn_selected.3)
+    pub fn tls_conn_alpn_selected(&mut self) -> error::Result<String> {
+        unsafe { cvt_string(self, libtls::tls_conn_alpn_selected(self.0)) }
     }
 
-    //
-    //
-    // The `conn_version` method
-    //
-    // # See also
-    //
-    // [`tls_conn_version(3)`](https://man.openbsd.org/tls_conn_version.3)
-
-    //
-    //
-    // The `ocsp_process_response` method
-    //
-    // # See also
-    //
-    // [`tls_ocsp_process_response(3)`](https://man.openbsd.org/tls_ocsp_process_response.3)
-
-    //
-    //
-    // The `peer_ocsp_cert_status` method
-    //
-    // # See also
-    //
-    // [`tls_peer_ocsp_cert_status(3)`](https://man.openbsd.org/tls_peer_ocsp_cert_status.3)
-    pub fn peer_ocsp_cert_status(&mut self) -> error::Result<()> {
-        cvt(self, unsafe { libtls::tls_peer_ocsp_cert_status(self.0) })
+    ///
+    ///
+    /// The `conn_cipher` method
+    ///
+    /// # See also
+    ///
+    /// [`tls_conn_cipher(3)`](https://man.openbsd.org/tls_conn_cipher.3)
+    pub fn conn_cipher(&mut self) -> error::Result<String> {
+        unsafe { cvt_string(self, libtls::tls_conn_cipher(self.0)) }
     }
 
-    //
-    //
-    // The `peer_ocsp_crl_reason` method
-    //
-    // # See also
-    //
-    // [`tls_peer_ocsp_crl_reason(3)`](https://man.openbsd.org/tls_peer_ocsp_crl_reason.3)
-    pub fn peer_ocsp_crl_reason(&mut self) -> error::Result<()> {
-        cvt(self, unsafe { libtls::tls_peer_ocsp_crl_reason(self.0) })
+    ///
+    ///
+    /// The `conn_servername` method
+    ///
+    /// # See also
+    ///
+    /// [`tls_conn_servername(3)`](https://man.openbsd.org/tls_conn_servername.3)
+    pub fn conn_servername(&mut self) -> error::Result<String> {
+        unsafe { cvt_string(self, libtls::tls_conn_servername(self.0)) }
     }
 
-    //
-    //
-    // The `peer_ocsp_next_update` method
-    //
-    // # See also
-    //
-    // [`tls_peer_ocsp_next_update(3)`](https://man.openbsd.org/tls_peer_ocsp_next_update.3)
+    ///
+    ///
+    /// The `conn_session_resumed` method
+    ///
+    /// # See also
+    ///
+    /// [`tls_conn_session_resumed(3)`](https://man.openbsd.org/tls_conn_session_resumed.3)
+    pub fn conn_session_resumed(&mut self) -> bool {
+        unsafe { libtls::tls_conn_session_resumed(self.0) != 0 }
+    }
+
+    ///
+    ///
+    /// The `conn_version` method
+    ///
+    /// # See also
+    ///
+    /// [`tls_conn_version(3)`](https://man.openbsd.org/tls_conn_version.3)
+    pub fn conn_version(&mut self) -> error::Result<String> {
+        unsafe { cvt_string(self, libtls::tls_conn_version(self.0)) }
+    }
+
+    ///
+    ///
+    /// The `ocsp_process_response` method
+    ///
+    /// # See also
+    ///
+    /// [`tls_ocsp_process_response(3)`](https://man.openbsd.org/tls_ocsp_process_response.3)
+    pub fn ocsp_process_response(&mut self, response: &[u8]) -> error::Result<()> {
+        cvt(self, unsafe {
+            libtls::tls_ocsp_process_response(self.0, response.as_ptr(), response.len())
+        })
+    }
+
+    ///
+    ///
+    /// The `peer_ocsp_cert_status` method
+    ///
+    /// # See also
+    ///
+    /// [`tls_peer_ocsp_cert_status(3)`](https://man.openbsd.org/tls_peer_ocsp_cert_status.3)
+    pub fn peer_ocsp_cert_status(&mut self) -> error::Result<isize> {
+        cvt_err(self, unsafe {
+            libtls::tls_peer_ocsp_cert_status(self.0) as isize
+        })
+    }
+
+    ///
+    ///
+    /// The `peer_ocsp_crl_reason` method
+    ///
+    /// # See also
+    ///
+    /// [`tls_peer_ocsp_crl_reason(3)`](https://man.openbsd.org/tls_peer_ocsp_crl_reason.3)
+    pub fn peer_ocsp_crl_reason(&mut self) -> error::Result<isize> {
+        cvt_err(self, unsafe {
+            libtls::tls_peer_ocsp_crl_reason(self.0) as isize
+        })
+    }
+
+    ///
+    ///
+    /// The `peer_ocsp_next_update` method
+    ///
+    /// # See also
+    ///
+    /// [`tls_peer_ocsp_next_update(3)`](https://man.openbsd.org/tls_peer_ocsp_next_update.3)
     pub fn peer_ocsp_next_update(&mut self) -> error::Result<SystemTime> {
         cvt_time(self, unsafe { libtls::tls_peer_ocsp_next_update(self.0) })
     }
 
-    //
-    //
-    // The `peer_ocsp_response_status` method
-    //
-    // # See also
-    //
-    // [`tls_peer_ocsp_response_status(3)`](https://man.openbsd.org/tls_peer_ocsp_response_status.3)
-    pub fn peer_ocsp_response_status(&mut self) -> error::Result<()> {
-        cvt(self, unsafe {
-            libtls::tls_peer_ocsp_response_status(self.0)
+    ///
+    ///
+    /// The `peer_ocsp_response_status` method
+    ///
+    /// # See also
+    ///
+    /// [`tls_peer_ocsp_response_status(3)`](https://man.openbsd.org/tls_peer_ocsp_response_status.3)
+    pub fn peer_ocsp_response_status(&mut self) -> error::Result<isize> {
+        cvt_err(self, unsafe {
+            libtls::tls_peer_ocsp_response_status(self.0) as isize
         })
     }
 
-    //
-    //
-    // The `peer_ocsp_result` method
-    //
-    // # See also
-    //
-    // [`tls_peer_ocsp_result(3)`](https://man.openbsd.org/tls_peer_ocsp_result.3)
+    ///
+    ///
+    /// The `peer_ocsp_result` method
+    ///
+    /// # See also
+    ///
+    /// [`tls_peer_ocsp_result(3)`](https://man.openbsd.org/tls_peer_ocsp_result.3)
+    pub fn peer_ocsp_result(&mut self) -> error::Result<String> {
+        unsafe { cvt_string(self, libtls::tls_peer_ocsp_result(self.0)) }
+    }
 
-    //
-    //
-    // The `peer_ocsp_revocation_time` method
-    //
-    // # See also
-    //
-    // [`tls_peer_ocsp_revocation_time(3)`](https://man.openbsd.org/tls_peer_ocsp_revocation_time.3)
+    ///
+    ///
+    /// The `peer_ocsp_revocation_time` method
+    ///
+    /// # See also
+    ///
+    /// [`tls_peer_ocsp_revocation_time(3)`](https://man.openbsd.org/tls_peer_ocsp_revocation_time.3)
     pub fn peer_ocsp_revocation_time(&mut self) -> error::Result<SystemTime> {
         cvt_time(self, unsafe {
             libtls::tls_peer_ocsp_revocation_time(self.0)
         })
     }
 
-    //
-    //
-    // The `peer_ocsp_this_update` method
-    //
-    // # See also
-    //
-    // [`tls_peer_ocsp_this_update(3)`](https://man.openbsd.org/tls_peer_ocsp_this_update.3)
+    ///
+    ///
+    /// The `peer_ocsp_this_update` method
+    ///
+    /// # See also
+    ///
+    /// [`tls_peer_ocsp_this_update(3)`](https://man.openbsd.org/tls_peer_ocsp_this_update.3)
     pub fn peer_ocsp_this_update(&mut self) -> error::Result<SystemTime> {
         cvt_time(self, unsafe { libtls::tls_peer_ocsp_this_update(self.0) })
     }
 
-    //
-    //
-    // The `peer_ocsp_url` method
-    //
-    // # See also
-    //
-    // [`tls_peer_ocsp_url(3)`](https://man.openbsd.org/tls_peer_ocsp_url.3)
+    ///
+    ///
+    /// The `peer_ocsp_url` method
+    ///
+    /// # See also
+    ///
+    /// [`tls_peer_ocsp_url(3)`](https://man.openbsd.org/tls_peer_ocsp_url.3)
+    pub fn peer_ocsp_url(&mut self) -> error::Result<String> {
+        unsafe { cvt_string(self, libtls::tls_peer_ocsp_url(self.0)) }
+    }
 }
 
 impl LastError for Tls {
@@ -659,7 +776,7 @@ impl From<*mut libtls::tls> for Tls {
         if tls.is_null() {
             panic!(io::Error::last_os_error())
         }
-        Tls(tls)
+        Tls(tls, None)
     }
 }
 
@@ -692,6 +809,9 @@ impl Drop for Tls {
                 if !(ret == TLS_WANT_POLLIN || ret == TLS_WANT_POLLOUT) {
                     break;
                 }
+            }
+            if let Some(fd) = self.1 {
+                libtls::close(fd);
             }
             libtls::tls_free(self.0);
         };

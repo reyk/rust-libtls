@@ -23,6 +23,11 @@
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
 use std::marker::{Send, Sync};
+use std::os::raw::c_int;
+
+extern "C" {
+    pub fn close(fd: c_int) -> c_int;
+}
 
 unsafe impl Send for tls {}
 unsafe impl Sync for tls {}

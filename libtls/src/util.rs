@@ -137,20 +137,43 @@ where
     }
 }
 
+pub fn cvt_err<E>(object: &mut E, retval: isize) -> Result<isize>
+where
+    E: LastError,
+{
+    if retval == -1 {
+        let errstr = object.last_error().unwrap_or("no error".to_string());
+        E::to_error(errstr)
+    } else {
+        Ok(retval)
+    }
+}
+
 pub fn cvt_time<E>(object: &mut E, itime: time_t) -> Result<SystemTime>
 where
     E: LastError,
 {
-    match itime {
-        -1 => {
-            let errstr = object.last_error().unwrap_or("no error".to_string());
-            E::to_error(errstr)
-        }
-        _ => {
-            let utime: u64 = itime.try_into()?;
-            let time: SystemTime = UNIX_EPOCH + Duration::from_secs(utime);
-            Ok(time)
-        }
+    if itime < 0 {
+        let errstr = object.last_error().unwrap_or("no error".to_string());
+        E::to_error(errstr)
+    } else {
+        let utime: u64 = itime.try_into()?;
+        let time: SystemTime = UNIX_EPOCH + Duration::from_secs(utime);
+        Ok(time)
+    }
+}
+
+pub unsafe fn cvt_string<E>(object: &mut E, retval: *const c_char) -> Result<String>
+where
+    E: LastError,
+{
+    if retval.is_null() {
+        let errstr = object.last_error().unwrap_or("no error".to_string());
+        E::to_error(errstr)
+    } else {
+        let c_str = CStr::from_ptr(retval);
+        let string = c_str.to_owned().to_string_lossy().to_string();
+        Ok(string)
     }
 }
 

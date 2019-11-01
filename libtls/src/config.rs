@@ -76,10 +76,8 @@
 use std::ffi::{CStr, CString};
 use std::io;
 use std::marker::{Send, Sync};
-use std::path::{Path, PathBuf};
-
-#[cfg(unix)]
 use std::os::unix::io::RawFd;
+use std::path::{Path, PathBuf};
 
 use super::error;
 use super::util::*;
@@ -737,7 +735,6 @@ impl TlsConfig {
     ///
     /// [`Tls`]: ../tls/struct.Tls.html
     /// [dropped]: ../tls/struct.Tls.html#impl-Drop
-    #[cfg(unix)]
     pub fn set_session_fd(&mut self, session_fd: RawFd) -> error::Result<()> {
         call_arg1(self, session_fd, libtls::tls_config_set_session_fd)
     }

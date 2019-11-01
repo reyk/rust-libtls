@@ -1,5 +1,10 @@
 # Rust bindings for [LibreSSL]'s [libtls] library.
 
+>
+> NOTE: THIS CRATE IS UNDER ACTIVE DEVELOPMENT AND WORK IN PROGRESS.
+> !!!DO NOT USE IT YET!!!
+>
+
 The [LibreSSL] project provides a free TLS and crypto stack that was forked
 from [OpenSSL] in 2014.  The goals are to provide a modernized codebase,
 improved security, and to apply best practice development processes.

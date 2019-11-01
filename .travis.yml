@@ -1,0 +1,11 @@
+dist: bionic
+language: rust
+rust:
+  - stable
+  - beta
+  - nightly
+env:
+  - LIBRESSL="3.0.2" LIBRESSL_DIR="$TRAVIS_HOME/$LIBRESSL" PKG_CONFIG_PATH="$LIBRESSL_DIR/lib/pkgconfig"
+  - LIBRESSL="2.7.0" LIBRESSL_DIR="$TRAVIS_HOME/$LIBRESSL" PKG_CONFIG_PATH="$LIBRESSL_DIR/lib/pkgconfig"
+before_install:
+  - sudo ./.travis/before_install.sh
