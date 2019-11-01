@@ -23,7 +23,7 @@ fn main() {
     // "statik" is set to true but pkg_config actually only enables it
     // if the library is found outside of /usr.
     let mut pkg = pkg_config::Config::new();
-    let cflags = match pkg.statik(true).atleast_version("2.7.0").probe("libtls") {
+    let cflags = match pkg.statik(true).atleast_version("2.9.0").probe("libtls") {
         Ok(library) => {
             let mut cflags = Vec::new();
             cflags.append(

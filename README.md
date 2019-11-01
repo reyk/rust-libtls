@@ -5,6 +5,8 @@
 > !!!DO NOT USE IT YET!!!
 >
 
+[![Build Status](https://travis-ci.org/reyk/rust-libtls.svg?branch=master)](https://travis-ci.org/reyk/rust-libtls)
+
 The [LibreSSL] project provides a free TLS and crypto stack that was forked
 from [OpenSSL] in 2014.  The goals are to provide a modernized codebase,
 improved security, and to apply best practice development processes.
@@ -15,7 +17,7 @@ is designed to make it easier to write foolproof applications.
 
 This crate provides Rust language bindings for [libtls] only, as the other
 [LibreSSL] APIs can be used with the existing [rust-openssl] crate.
-[LibreSSL] versions 2.7.0 through 3.0.2 (or later) are supported.
+[LibreSSL] versions 2.9.0 through 3.0.2 (or later) are supported.
 
 ## Example
 

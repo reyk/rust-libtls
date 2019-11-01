@@ -7,6 +7,9 @@ license = "ISC"
 description = "Rust bindings for LibreSSL's libtls library."
 repository = "https://github.com/reyk/rust-libtls"
 
+[badges]
+travis-ci = { repository = "reyk/rust-libtls", branch = "master" }
+
 [dependencies]
 libtls-sys = { path = "../libtls-sys", version = "0.1.1" }
 

@@ -8,6 +8,9 @@ description = "Rust bindings for LibreSSL's libtls library."
 repository = "https://github.com/reyk/rust-libtls"
 links = "libtls"
 
+[badges]
+travis-ci = { repository = "reyk/rust-libtls", branch = "master" }
+
 [build-dependencies]
 bindgen = "0.51.1"
 pkg-config = "0.3.16"
