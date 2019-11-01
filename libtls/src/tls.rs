@@ -42,10 +42,16 @@
 //! [`Tls`]: struct.Tls.html
 //! [`TlsConfig`]: ../config/struct.TlsConfig.html
 
+use std::ffi::CString;
 use std::io;
+use std::net::ToSocketAddrs;
+use std::os::raw::c_void;
+
+#[cfg(unix)]
+use std::os::unix::io::RawFd;
 
 use super::config::TlsConfig;
-use super::error::Result;
+use super::error::{LastError, Result};
 use super::*;
 
 /// TLS connection clients and servers.
@@ -132,37 +138,97 @@ impl Tls {
         unsafe { libtls::tls_reset(self.0) };
     }
 
-    //
-    //
-    // The `accept_fds` method
-    //
-    // # See also
-    //
-    // [`tls_accept_fds(3)`](https://man.openbsd.org/tls_accept_fds.3)
+    /// Accept a new client connection on a pair of existing file descriptors.
+    ///
+    /// The `accept_fds` method can accept a new client connection on a pair
+    /// of existing file descriptors.
+    ///
+    /// # See also
+    ///
+    /// [`tls_accept_fds(3)`](https://man.openbsd.org/tls_accept_fds.3)
+    pub fn accept_fds(&mut self, fd_read: RawFd, fd_write: RawFd) -> Result<Tls> {
+        unsafe {
+            // XXX Make sure that this pointer handling is correct!
+            let mut cctx: *mut libtls::tls = std::ptr::null_mut();
+            cvt(
+                self,
+                libtls::tls_accept_fds(self.0, &mut cctx, fd_read, fd_write),
+            )?;
+            Ok(cctx.into())
+        }
+    }
 
-    //
-    //
-    // The `accept_socket` method
-    //
-    // # See also
-    //
-    // [`tls_accept_socket(3)`](https://man.openbsd.org/tls_accept_socket.3)
+    /// Accept a new client connection on a socket.
+    ///
+    /// The `accept_socket` method can accept a new client
+    /// connection on an already established
+    /// socket connection.
+    ///
+    /// # See also
+    ///
+    /// [`tls_accept_socket(3)`](https://man.openbsd.org/tls_accept_socket.3)
+    pub fn accept_socket(&mut self, socket: RawFd) -> Result<Tls> {
+        unsafe {
+            // XXX Make sure that this pointer handling is correct!
+            let mut cctx: *mut libtls::tls = std::ptr::null_mut();
+            cvt(self, libtls::tls_accept_socket(self.0, &mut cctx, socket))?;
+            Ok(cctx.into())
+        }
+    }
 
-    //
-    //
-    // The `accept_cbs` method
-    //
-    // # See also
-    //
-    // [`tls_accept_cbs(3)`](https://man.openbsd.org/tls_accept_cbs.3)
+    /// Accept a new client connection with custom I/O callbacks.
+    ///
+    /// The `accept_cbs` method allows read and write callback functions to
+    /// handle data transfers.  The specified `cb_arg` parameter is passed back to
+    /// the functions, and can contain a pointer to any caller-specified data.
+    ///
+    /// # See also
+    ///
+    /// [`tls_accept_cbs(3)`](https://man.openbsd.org/tls_accept_cbs.3)
+    pub unsafe fn accept_cbs(
+        &mut self,
+        read_cb: TlsReadCb,
+        write_cb: TlsWriteCb,
+        cb_arg: Option<*mut c_void>,
+    ) -> Result<Tls> {
+        // XXX Make sure that this pointer handling is correct!
+        let mut cctx: *mut libtls::tls = std::ptr::null_mut();
+        let cb_arg = cb_arg.unwrap_or(std::ptr::null_mut());
+        cvt(
+            self,
+            libtls::tls_accept_cbs(self.0, &mut cctx, read_cb, write_cb, cb_arg),
+        )?;
+        Ok(cctx.into())
+    }
 
-    //
-    //
-    // The `connect` method
-    //
-    // # See also
-    //
-    // [`tls_connect(3)`](https://man.openbsd.org/tls_connect.3)
+    /// Initiate a new client connection.
+    ///
+    /// The `connect` method initiates a new client connection on a
+    /// [`Tls`] object that has been configured with [`configure`].
+    /// This method will create a new socket, connect to the specified host and port,
+    /// and then establish a secure connection.  The port may be numeric or a
+    /// service name.  If it is None, then a host of the format "hostname:port"
+    /// is permitted.  The name to use for verification is inferred from the host value.
+    ///
+    /// # See also
+    ///
+    /// [`tls_connect(3)`](https://man.openbsd.org/tls_connect.3)
+    ///
+    /// [`Tls`]: struct.Tls.html
+    /// [`configure`]: #method.configure
+    pub fn connect(&mut self, host: &str, port: Option<&str>) -> Result<()> {
+        unsafe {
+            let c_host = CString::new(host)?;
+            let c_port = match port {
+                Some(port) => {
+                    let c_port = CString::new(port)?;
+                    c_port.as_ptr()
+                }
+                None => std::ptr::null(),
+            };
+            cvt(self, libtls::tls_connect(self.0, c_host.as_ptr(), c_port))
+        }
+    }
 
     //
     //
@@ -172,13 +238,32 @@ impl Tls {
     //
     // [`tls_connect_fds(3)`](https://man.openbsd.org/tls_connect_fds.3)
 
-    //
-    //
-    // The `connect_servername` method
-    //
-    // # See also
-    //
-    // [`tls_connect_servername(3)`](https://man.openbsd.org/tls_connect_servername.3)
+    ///
+    ///
+    /// The `connect_servername` method
+    ///
+    /// # See also
+    ///
+    /// [`tls_connect_servername(3)`](https://man.openbsd.org/tls_connect_servername.3)
+    pub fn _connect_servername<A: ToSocketAddrs>(
+        &mut self,
+        _addrs: A,
+        _servername: &str,
+    ) -> Result<()> {
+        /* XXX
+            let mut addr_iter = addrs.to_socket_addrs()?;
+
+        let addr = match addr_iter.next() {
+            None => return Self::to_error("no address to connect to".to_owned()),
+            Some(addr) => addr,
+        };
+            if let Some(_) = addr_iter.next() {
+                return Self::to_error("connect takes a single address".to_owned());
+            }
+         */
+
+        Ok(())
+    }
 
     //
     //
@@ -405,7 +490,7 @@ impl Tls {
     // [`tls_peer_ocsp_url(3)`](https://man.openbsd.org/tls_peer_ocsp_url.3)
 }
 
-impl error::LastError for Tls {
+impl LastError for Tls {
     /// Returns the last error of the TLS context.
     ///
     /// The `last_error` method returns an error if no error occurred with
