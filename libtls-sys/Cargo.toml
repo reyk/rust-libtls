@@ -1,6 +1,6 @@
 [package]
 name = "libtls-sys"
-version = "1.0.0-alpha4"
+version = "1.0.0-alpha5"
 authors = ["Reyk Floeter <contact@reykfloeter.com>"]
 edition = "2018"
 license = "ISC"
@@ -9,6 +9,7 @@ description = "FFI bindings for LibreSSL's libtls library."
 repository = "https://github.com/reyk/rust-libtls"
 categories = ["cryptography", "external-ffi-bindings"]
 keywords = ["libressl", "openbsd"]
+documentation = "https://reyk.github.io/rust-libtls/libtls-sys/"
 links = "libtls"
 build = "build.rs"
 
