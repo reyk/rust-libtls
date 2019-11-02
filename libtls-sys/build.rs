@@ -33,20 +33,37 @@ fn libressl() -> Vec<String> {
     use std::path::Path;
     use std::process::Command;
 
-    if !Path::new("libressl-portable").exists() {
-        Command::new("git")
-            .args(&["submodule", "update", "--init"])
-            .status()
-            .unwrap();
+    let libressldir = "libressl-portable";
+    let libresslver = "v3.0.2";
+
+    if !Path::new(libressldir).exists() {
+        if Path::new("../.gitmodules").exists() {
+            Command::new("git")
+                .args(&["submodule", "update", "--init"])
+                .status()
+                .unwrap();
+        } else {
+            Command::new("git")
+                .args(&[
+                    "clone",
+                    "--single-branch",
+                    "-b",
+                    libresslver,
+                    "https://github.com/libressl-portable/portable.git",
+                    libressldir,
+                ])
+                .status()
+                .unwrap();
+        }
     }
 
     let curdir = env::current_dir().unwrap();
     let outdir = env::var("OUT_DIR").unwrap();
     env::set_var("LIBRESSL_DIR", format!("{}/libressl", outdir));
-    env::set_current_dir("libressl-portable").unwrap();
+    env::set_current_dir(libressldir).unwrap();
     for cmd in [
         "test -s configure || ./autogen.sh",
-        "test -s config.log || ./configure --prefix=$LIBRESSL_DIR --with-openssldir=$LIBRESSL_DIR",
+        "./configure --prefix=$LIBRESSL_DIR --with-openssldir=$LIBRESSL_DIR",
         &format!("make -j{}", num_cpus::get()),
         "make install",
     ]
