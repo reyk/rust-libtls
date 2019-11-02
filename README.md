@@ -7,6 +7,7 @@
 
 [![Crates.IO](https://img.shields.io/crates/v/libtls.svg)](https://crates.io/crates/libtls)
 [![Build Status](https://travis-ci.org/reyk/rust-libtls.svg?branch=master)](https://travis-ci.org/reyk/rust-libtls)
+[![License](https://img.shields.io/badge/license-ISC-blue.svg)](https://raw.githubusercontent.com/reyk/rust-libtls/master/LICENSE)
 
 The [LibreSSL] project provides a free TLS and crypto stack that was forked
 from [OpenSSL] in 2014.  The goals are to provide a modernized codebase,
