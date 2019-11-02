@@ -13,11 +13,11 @@
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 extern crate bindgen;
+extern crate num_cpus;
 extern crate pkg_config;
 
 use std::env;
-use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::path::PathBuf;
 
 #[cfg(target_os = "openbsd")]
 fn libressl() -> Vec<String> {
@@ -30,6 +30,9 @@ fn libressl() -> Vec<String> {
 
 #[cfg(not(target_os = "openbsd"))]
 fn libressl() -> Vec<String> {
+    use std::path::Path;
+    use std::process::Command;
+
     if !Path::new("libressl-portable").exists() {
         Command::new("git")
             .args(&["submodule", "update", "--init"])
@@ -38,12 +41,13 @@ fn libressl() -> Vec<String> {
     }
 
     let curdir = env::current_dir().unwrap();
-    env::set_var("LIBRESSL_DIR", format!("{}/libressl", curdir.display()));
+    let outdir = env::var("OUT_DIR").unwrap();
+    env::set_var("LIBRESSL_DIR", format!("{}/libressl", outdir));
     env::set_current_dir("libressl-portable").unwrap();
     for cmd in [
-        "./autogen.sh",
-        "./configure --prefix=$LIBRESSL_DIR --with-openssldir=$LIBRESSL_DIR",
-        "make",
+        "test -s configure || ./autogen.sh",
+        "test -s config.log || ./configure --prefix=$LIBRESSL_DIR --with-openssldir=$LIBRESSL_DIR",
+        &format!("make -j{}", num_cpus::get()),
         "make install",
     ]
     .iter()
@@ -52,14 +56,11 @@ fn libressl() -> Vec<String> {
     }
     env::set_current_dir(&curdir).unwrap();
 
-    println!(
-        "cargo:rustc-link-search=native={}/libressl/lib",
-        curdir.display()
-    );
+    println!("cargo:rustc-link-search=native={}/libressl/lib", outdir);
     println!("cargo:rustc-link-lib=static=tls");
     println!("cargo:rustc-link-lib=static=ssl");
     println!("cargo:rustc-link-lib=static=crypto");
-    vec!["-Ilibressl/include".to_owned()]
+    vec![format!("-I{}/libressl/include", outdir)]
 }
 
 fn main() {

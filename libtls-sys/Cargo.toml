@@ -18,3 +18,4 @@ travis-ci = { repository = "reyk/rust-libtls", branch = "master" }
 [build-dependencies]
 bindgen = "0.51.1"
 pkg-config = "0.3.16"
+num_cpus = "1.11.0"
