@@ -609,7 +609,7 @@ impl Tls {
     /// # See also
     ///
     /// [`tls_conn_alpn_selected(3)`](https://man.openbsd.org/tls_conn_alpn_selected.3)
-    pub fn tls_conn_alpn_selected(&mut self) -> Option<String> {
+    pub fn conn_alpn_selected(&mut self) -> Option<String> {
         unsafe {
             let ptr = libtls::tls_conn_alpn_selected(self.0);
             if ptr.is_null() {
