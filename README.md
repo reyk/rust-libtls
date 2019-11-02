@@ -1,10 +1,5 @@
 # Rust bindings for [LibreSSL]'s [libtls] library.
 
->
-> NOTE: THIS CRATE IS UNDER ACTIVE DEVELOPMENT AND WORK IN PROGRESS.
-> !!!DO NOT USE IT YET!!!
->
-
 [![Crates.IO](https://img.shields.io/crates/v/libtls.svg)](https://crates.io/crates/libtls)
 [![Build Status](https://travis-ci.org/reyk/rust-libtls.svg?branch=master)](https://travis-ci.org/reyk/rust-libtls)
 [![License](https://img.shields.io/badge/license-ISC-blue.svg)](https://raw.githubusercontent.com/reyk/rust-libtls/master/LICENSE)

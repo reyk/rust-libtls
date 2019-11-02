@@ -203,6 +203,7 @@ pub fn init() -> error::Result<()> {
 mod test {
     use super::config::*;
     use super::*;
+    use std::io::{Read, Write};
 
     fn cloudflare_sync_client() -> error::Result<()> {
         let mut buf = [0u8; 32];

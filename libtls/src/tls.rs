@@ -390,12 +390,12 @@ impl Tls {
 
     /// Explicitly perform the TLS handshake.
     ///
-    /// The `handshake` method explicitly performs the TLS handshake.  It is only
+    /// The `tls_handshake` method explicitly performs the TLS handshake.  It is only
     /// necessary to call this method if you need to guarantee that the
-    /// handshake has completed, as both [`read`] and [`write`] automatically
+    /// handshake has completed, as both [`tls_read`] and [`tls_write`] automatically
     /// perform the TLS handshake when necessary.
     ///
-    /// The [`read`], [`write`], `handshake`, and [`close`] methods return
+    /// The [`tls_read`], [`tls_write`], `tls_handshake`, and [`close`] methods return
     /// -1 on error and also have two special return values:
     ///
     /// * [`TLS_WANT_POLLIN`]: The underlying read file descriptor needs to be
@@ -408,34 +408,39 @@ impl Tls {
     /// the same function call should be repeated when the required condition has
     /// been met.
     ///
-    /// On success, the [`read`] and [`write`] methods return a size and
-    /// the `handshake` and [`close`] methods return 0.
+    /// On success, the [`tls_read`] and [`tls_write`] methods return a size and
+    /// the `tls_handshake` and [`close`] methods return 0.
     ///
     /// # See also
     ///
     /// [`tls_handshake(3)`](https://man.openbsd.org/tls_handshake.3)
     ///
-    /// [`read`]: #method.read
-    /// [`write`]: #method.write
+    /// [`tls_read`]: #method.tls_read
+    /// [`tls_write`]: #method.tls_write
     /// [`close`]: #method.close
     /// [`TLS_WANT_POLLIN`]: ../constant.TLS_WANT_POLLIN.html
     /// [`TLS_WANT_POLLOUT`]: ../constant.TLS_WANT_POLLOUT.html
-    pub fn handshake(&mut self) -> error::Result<isize> {
+    pub fn tls_handshake(&mut self) -> error::Result<isize> {
         cvt_err(self, unsafe { libtls::tls_handshake(self.0) as isize })
     }
 
     /// Read bytes from the TLS connection.
     ///
-    /// The `read` method reads bytes of data from the connection into `buf`.  It
-    /// returns the amount of data read or an error as described in [`handshake`].
+    /// The `tls_read` method reads bytes of data from the connection into `buf`.  It
+    /// returns the amount of data read or an error as described in [`tls_handshake`].
+    ///
+    /// This function is provided for the completeness of the API, programs should
+    /// use the implemented [`read`] function of the `Read` trait instead.
     ///
     /// # See also
     ///
-    /// [`handshake`],
+    /// [`tls_handshake`],
+    /// [`read`],
     /// [`tls_read(3)`](https://man.openbsd.org/tls_read.3)
     ///
-    /// [`handshake`]: #method.handshake
-    pub fn read(&mut self, buf: &mut [u8]) -> error::Result<isize> {
+    /// [`read`]: #impl-Read
+    /// [`tls_handshake`]: #method.tls_handshake
+    pub fn tls_read(&mut self, buf: &mut [u8]) -> error::Result<isize> {
         cvt_err(self, unsafe {
             libtls::tls_read(self.0, buf.as_mut_ptr() as *mut c_void, buf.len())
         })
@@ -443,16 +448,21 @@ impl Tls {
 
     /// Write bytes to the TLS connection.
     ///
-    /// The `write` method writes bytes of data from `buf` to connection.  It
-    /// returns the amount of data written or an error as described in [`handshake`].
+    /// The `tls_write` method writes bytes of data from `buf` to connection.  It
+    /// returns the amount of data written or an error as described in [`tls_handshake`].
+    ///
+    /// This function is provided for the completeness of the API, programs should
+    /// use the implemented [`write`] function of the `Write` trait instead.
     ///
     /// # See also
     ///
-    /// [`handshake`],
+    /// [`tls_handshake`],
+    /// [`write`],
     /// [`tls_write(3)`](https://man.openbsd.org/tls_write.3)
     ///
-    /// [`handshake`]: #method.handshake
-    pub fn write(&mut self, buf: &[u8]) -> error::Result<isize> {
+    /// [`write`]: #impl-Write
+    /// [`tls_handshake`]: #method.tls_handshake
+    pub fn tls_write(&mut self, buf: &[u8]) -> error::Result<isize> {
         cvt_err(self, unsafe {
             libtls::tls_write(self.0, buf.as_ptr() as *const c_void, buf.len())
         })
@@ -465,14 +475,14 @@ impl Tls {
     /// unless the connection was established using [`connect`] or
     /// [`connect_servername`]__.
     ///
-    /// It returns 0 on success or an error as decribed in [`handshake`].
+    /// It returns 0 on success or an error as decribed in [`tls_handshake`].
     ///
     /// # See also
     ///
-    /// [`handshake`],
+    /// [`tls_handshake`],
     /// [`tls_write(3)`](https://man.openbsd.org/tls_write.3)
     ///
-    /// [`handshake`]: #method.handshake
+    /// [`tls_handshake`]: #method.tls_handshake
     /// [`connect`]: #method.connect
     /// [`connect_servername`]: #method.connect_servername
     pub fn close(&mut self) -> error::Result<isize> {
@@ -796,8 +806,8 @@ impl LastError for Tls {
     /// Returns the last error of the TLS context.
     ///
     /// The `last_error` method returns an error if no error occurred with
-    /// the TLS context during or since the last call to `handshake`,
-    /// `read`, `write`, `close`, or `reset` involving the context,
+    /// the TLS context during or since the last call to `tls_handshake`,
+    /// `read`, `tls_write`, `close`, or `reset` involving the context,
     /// or if memory allocation failed while trying to assemble the string
     /// describing the most recent error related to the context.
     ///
@@ -857,6 +867,69 @@ impl Drop for Tls {
             }
             libtls::tls_free(self.0);
         };
+    }
+}
+
+/// Convert return value of `Tls` I/O functions into `io::Error`.
+///
+/// This macro converts the return value of [`Tls::tls_read`], [`Tls::tls_write`],
+/// [`Tls::tls_handshake`], or [`Tls::close`] into [`io::Error`].
+///
+/// # See also
+///
+/// [`Tls::tls_handshake`]
+///
+/// [`Tls::tls_read`]: tls/struct.Tls.html#method.tls_read
+/// [`Tls::tls_write`]: tls/struct.Tls.html#method.tls_write
+/// [`Tls::tls_handshake`]: tls/struct.Tls.html#method.tls_handshake
+/// [`Tls::close`]: tls/struct.Tls.html#method.close
+/// [`io::Error`]: https://doc.rust-lang.org/std/io/struct.Error.html
+#[macro_export]
+macro_rules! try_tls {
+    ($self: expr, $call: expr) => {
+        match $call {
+            Err(err) => Err(io::Error::new(io::ErrorKind::Other, err)),
+            Ok(size) => {
+                if size == TLS_WANT_POLLIN as isize || size == TLS_WANT_POLLOUT as isize {
+                    Err(io::Error::new(
+                        io::ErrorKind::WouldBlock,
+                        io::Error::last_os_error(),
+                    ))
+                } else {
+                    Ok(size as usize)
+                }
+            }
+        }
+    };
+}
+
+impl io::Read for Tls {
+    /// Read from the TLS connection.
+    ///
+    /// The `read` method reads bytes of data from the connection into `buf`.
+    ///
+    /// # See also
+    ///
+    /// [`tls_read`](#method.tls_read)
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        try_tls!(self, self.tls_read(buf))
+    }
+}
+
+impl io::Write for Tls {
+    /// Write to the TLS connection.
+    ///
+    /// The `write` method writes bytes of data from `buf` to the connection.
+    ///
+    /// # See also
+    ///
+    /// [`tls_write`](#method.tls_write)
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        try_tls!(self, self.tls_write(buf))
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
     }
 }
 

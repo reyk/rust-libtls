@@ -24,6 +24,8 @@ use libtls::time_t;
 use super::config::TlsConfig;
 use super::error::{LastError, Result, TlsError};
 
+/// XXX Convert functions into macros.
+
 pub fn call_file1<P: AsRef<Path>>(
     config: &mut TlsConfig,
     file1: (P, &str),
@@ -153,6 +155,16 @@ where
     }
 }
 
+pub fn cvt_io<T, E>(ok: T, retval: c_int) -> std::result::Result<T, E>
+where
+    E: std::convert::From<io::Error>,
+{
+    match retval {
+        -1 => Err(io::Error::last_os_error().into()),
+        _ => Ok(ok),
+    }
+}
+
 pub fn cvt_time<E>(object: &mut E, itime: time_t) -> Result<SystemTime>
 where
     E: LastError,
@@ -182,16 +194,6 @@ where
         let c_str = CStr::from_ptr(retval);
         let string = c_str.to_owned().to_string_lossy().to_string();
         Ok(string)
-    }
-}
-
-pub fn cvt_io<T, E>(ok: T, retval: c_int) -> std::result::Result<T, E>
-where
-    E: std::convert::From<io::Error>,
-{
-    match retval {
-        -1 => Err(io::Error::last_os_error().into()),
-        _ => Ok(ok),
     }
 }
 

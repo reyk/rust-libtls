@@ -12,6 +12,7 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
+use std::error;
 use std::ffi;
 use std::fmt;
 use std::io;
@@ -57,6 +58,12 @@ impl fmt::Display for TlsError {
             TlsError::NulError(err) => err.fmt(f),
             TlsError::NoError => write!(f, "no error"),
         }
+    }
+}
+
+impl error::Error for TlsError {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+        None
     }
 }
 
