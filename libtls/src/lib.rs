@@ -198,3 +198,29 @@ pub use libtls::{
 pub fn init() -> error::Result<()> {
     cvt_io((), unsafe { libtls::tls_init() })
 }
+
+#[cfg(test)]
+mod test {
+    use super::config::*;
+    use super::*;
+
+    fn cloudflare_sync_client() -> error::Result<()> {
+        let mut buf = [0u8; 32];
+        let mut tls = TlsConfigBuilder::new().ca_path("/etc/ssl/certs").client()?;
+
+        tls.connect_servername(("1.1.1.1", 443), "cloudflare-dns.com")?;
+        tls.write(b"GET / HTTP/1.1\r\nHost: cloudflare-dns.com\r\n\r\n")?;
+        tls.read(&mut buf)?;
+
+        let ok = b"HTTP/1.1 200 OK\r\n";
+        assert_eq!(&buf[..ok.len()], ok);
+
+        Ok(())
+    }
+
+    #[test]
+    #[ignore]
+    fn test_cloudflare_sync_client() {
+        cloudflare_sync_client().unwrap();
+    }
+}

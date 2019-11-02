@@ -701,7 +701,7 @@ impl Tls {
         })
     }
 
-    /// OCSP certificate revocation reason. 
+    /// OCSP certificate revocation reason.
     ///
     /// The `peer_ocsp_crl_reason` method returns the OCSP certificate revocation reason
     /// status code as per RFC 5280 section 5.3.1.
@@ -770,7 +770,7 @@ impl Tls {
 
     /// OCSP this update time.
     ///
-    /// The `peer_ocsp_this_update` method returns the OCSP this update time. 
+    /// The `peer_ocsp_this_update` method returns the OCSP this update time.
     ///
     /// # See also
     ///

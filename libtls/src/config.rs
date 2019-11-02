@@ -81,6 +81,7 @@ use std::os::unix::io::RawFd;
 use std::path::{Path, PathBuf};
 
 use super::error;
+use super::tls::Tls;
 use super::util::*;
 
 /// The TLS configuration context for [`Tls`] connections.
@@ -1165,6 +1166,7 @@ pub fn unload_file(mut data: Vec<u8>) {
 #[derive(Debug)]
 enum KeyData {
     File(PathBuf),
+    Path(PathBuf),
     KeyPairFiles(PathBuf, PathBuf, Option<PathBuf>),
     KeyPairMem(Vec<u8>, Vec<u8>, Option<Vec<u8>>),
     Mem(Vec<u8>),
@@ -1284,6 +1286,7 @@ impl TlsConfigBuilder {
             match ca {
                 KeyData::Mem(mem) => config.set_ca_mem(mem)?,
                 KeyData::File(file) => config.set_ca_file(file)?,
+                KeyData::Path(path) => config.set_ca_path(path)?,
                 _ => Err(error::TlsError::NoError)?,
             };
         }
@@ -1349,6 +1352,36 @@ impl TlsConfigBuilder {
         Ok(config)
     }
 
+    /// Build new [`TlsConfig`] object and return a configured [`Tls`] client.
+    ///
+    /// # See also
+    ///
+    /// [`Tls`],
+    /// [`TlsConfig`]
+    ///
+    /// [`Tls`]: ../tls/struct.Tls.html
+    /// [`TlsConfig`]: struct.TlsConfig.html
+    pub fn client(&self) -> error::Result<Tls> {
+        let mut client = Tls::client()?;
+        client.configure(&self.build()?)?;
+        Ok(client)
+    }
+
+    /// Build new [`TlsConfig`] object and return a configured [`Tls`] server.
+    ///
+    /// # See also
+    ///
+    /// [`Tls`],
+    /// [`TlsConfig`]
+    ///
+    /// [`Tls`]: ../tls/struct.Tls.html
+    /// [`TlsConfig`]: struct.TlsConfig.html
+    pub fn server(&self) -> error::Result<Tls> {
+        let mut server = Tls::server()?;
+        server.configure(&self.build()?)?;
+        Ok(server)
+    }
+
     /// Set the ALPN protocols that are supported.
     ///
     /// # See also
@@ -1366,6 +1399,16 @@ impl TlsConfigBuilder {
     /// [`TlsConfig::set_ca_file`](struct.TlsConfig.html#method.set_ca_file)
     pub fn ca_file<'a, P: AsRef<Path>>(&'a mut self, path: P) -> &'a mut Self {
         self.ca = Some(KeyData::File(path.as_ref().to_owned()));
+        self
+    }
+
+    /// Set the CA path.
+    ///
+    /// # See also
+    ///
+    /// [`TlsConfig::set_ca_path`](struct.TlsConfig.html#method.set_ca_path)
+    pub fn ca_path<'a, P: AsRef<Path>>(&'a mut self, path: P) -> &'a mut Self {
+        self.ca = Some(KeyData::Path(path.as_ref().to_owned()));
         self
     }
 
