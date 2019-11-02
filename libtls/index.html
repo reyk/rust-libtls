@@ -13,7 +13,7 @@ is designed to make it easier to write foolproof applications.</p>
 <span class="kw">use</span> <span class="ident">libtls</span>::<span class="ident">config</span>::<span class="ident">TlsConfig</span>;
 <span class="kw">use</span> <span class="ident">libtls</span>::<span class="ident">error</span>;
 
-<span class="kw">fn</span> <span class="ident">tls_server_config</span>() <span class="op">-&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">TlsConfig</span><span class="op">&gt;</span> {
+<span class="kw">fn</span> <span class="ident">tls_server_config</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">TlsConfig</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tls_config</span> <span class="op">=</span> <span class="ident">TlsConfig</span>::<span class="ident">new</span>()<span class="question-mark">?</span>;
     <span class="ident">tls_config</span>.<span class="ident">set_keypair_file</span>(<span class="string">&quot;tests/eccert.crt&quot;</span>, <span class="string">&quot;tests/eccert.key&quot;</span>)<span class="question-mark">?</span>;
     <span class="ident">tls_config</span>.<span class="ident">set_protocols</span>(<span class="ident">libtls_sys</span>::<span class="ident">TLS_PROTOCOL_TLSv1_2</span>);
@@ -28,7 +28,7 @@ is designed to make it easier to write foolproof applications.</p>
 builder pattern:</p>
 
 <div class="example-wrap"><pre class="rust rust-example-rendered">
-<span class="kw">fn</span> <span class="ident">tls_server_config</span>() <span class="op">-&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">TlsConfig</span><span class="op">&gt;</span> {
+<span class="kw">fn</span> <span class="ident">tls_server_config</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">TlsConfig</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">tls_config</span> <span class="op">=</span> <span class="ident">TlsConfigBuilder</span>::<span class="ident">new</span>()
         .<span class="ident">keypair_file</span>(<span class="string">&quot;tests/eccert.crt&quot;</span>, <span class="string">&quot;tests/eccert.key&quot;</span>, <span class="prelude-val">None</span>)
         .<span class="ident">protocols</span>(<span class="ident">libtls_sys</span>::<span class="ident">TLS_PROTOCOL_TLSv1_2</span>)

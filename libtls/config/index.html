@@ -6,7 +6,7 @@ configuration context and its helper funtions.</p>
 <span class="kw">use</span> <span class="ident">libtls</span>::<span class="ident">config</span>::{<span class="self">self</span>, <span class="ident">TlsConfig</span>};
 <span class="kw">use</span> <span class="ident">libtls</span>::<span class="ident">error</span>;
 
-<span class="kw">fn</span> <span class="ident">tls_server_config</span>() <span class="op">-&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">TlsConfig</span><span class="op">&gt;</span> {
+<span class="kw">fn</span> <span class="ident">tls_server_config</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">TlsConfig</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tls_config</span> <span class="op">=</span> <span class="ident">TlsConfig</span>::<span class="ident">new</span>()<span class="question-mark">?</span>;
 
     <span class="kw">let</span> <span class="ident">valid_cert</span> <span class="op">=</span> <span class="macro">include_bytes</span><span class="macro">!</span>(<span class="string">&quot;../tests/eccert.crt&quot;</span>);

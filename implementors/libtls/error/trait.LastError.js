@@ -6,5 +6,4 @@ implementors["libtls"] = [];
             } else {
                 window.pending_implementors = implementors;
             }
-        
-})()
+        })()
