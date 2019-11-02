@@ -73,6 +73,7 @@
 //! [`Tls`]: ../tls/struct.Tls.html
 //! [`TlsConfig`]: struct.TlsConfig.html
 
+use std::collections::HashMap;
 use std::ffi::{CStr, CString};
 use std::io;
 use std::marker::{Send, Sync};
@@ -238,7 +239,7 @@ impl TlsConfig {
     ///
     /// [`add_keypair_mem`](#method.add_keypair_mem),
     /// [`tls_config_add_keypair_ocsp_mem(3)`](https://man.openbsd.org/tls_config_add_keypair_ocsp_mem.3)
-    pub fn tls_config_add_keypair_ocsp_mem(
+    pub fn add_keypair_ocsp_mem(
         &mut self,
         cert: &[u8],
         key: &[u8],
@@ -375,6 +376,8 @@ impl TlsConfig {
         })
     }
 
+    /// Set the list of cipher that may be used.
+    ///
     /// The `set_ciphers` method sets the list of ciphers that may be used.
     /// Lists of ciphers are specified by name, and the permitted names are:
     ///
@@ -747,8 +750,12 @@ impl TlsConfig {
     /// # See also
     ///
     /// [`tls_config_set_verify_depth(3)`](https://man.openbsd.org/tls_config_set_verify_depth.3)
-    pub fn set_set_verify_depth(&mut self, verify_depth: i32) -> error::Result<()> {
-        call_arg1(self, verify_depth, libtls::tls_config_set_verify_depth)
+    pub fn set_verify_depth(&mut self, verify_depth: usize) -> error::Result<()> {
+        call_arg1(
+            self,
+            verify_depth as i32,
+            libtls::tls_config_set_verify_depth,
+        )
     }
 
     /// Prefer ciphers in the client's cipher list.
@@ -915,8 +922,12 @@ impl TlsConfig {
     /// # See also
     ///
     /// [`tls_config_set_session_lifetime(3)`](https://man.openbsd.org/tls_config_set_session_lifetime.3)
-    pub fn set_session_lifetime(&mut self, lifetime: i32) -> error::Result<()> {
-        call_arg1(self, lifetime, libtls::tls_config_set_session_lifetime)
+    pub fn set_session_lifetime(&mut self, lifetime: usize) -> error::Result<()> {
+        call_arg1(
+            self,
+            lifetime as i32,
+            libtls::tls_config_set_session_lifetime,
+        )
     }
 
     /// Add a key for the encryption and authentication of TLS tickets.
@@ -1149,4 +1160,436 @@ pub fn unload_file(mut data: Vec<u8>) {
     let len = data.len();
     std::mem::forget(data);
     unsafe { libtls::tls_unload_file(ptr, len) }
+}
+
+#[derive(Debug)]
+enum KeyData {
+    File(PathBuf),
+    KeyPairFiles(PathBuf, PathBuf, Option<PathBuf>),
+    KeyPairMem(Vec<u8>, Vec<u8>, Option<Vec<u8>>),
+    Mem(Vec<u8>),
+}
+
+/// `TlsConfigBuilder` for [`TlsConfig`].
+///
+/// # Example
+///
+/// ```
+/// # use libtls::config::TlsConfigBuilder;
+/// # use libtls::error::Result;
+/// # use libtls_sys::*;
+/// # fn tls_config() -> Result<()> {
+/// #     let key = include_bytes!("../tests/eccert.key");
+/// #     let cert = include_bytes!("../tests/eccert.crt");
+/// #     let ticket_key1 = [0; TLS_TICKET_KEY_SIZE as usize];
+/// #     let ticket_key2 = [0; TLS_TICKET_KEY_SIZE as usize];
+/// let mut config = TlsConfigBuilder::new()
+///     .keypair_mem(cert, key, None)
+///     .ticket_key(1, &ticket_key1)
+///     .ticket_key(2, &ticket_key2)
+///     .protocols(TLS_PROTOCOLS_ALL)
+///     .ecdhecurves("X25519")
+///     .alpn("h2")
+///     .build()?;
+/// #     Ok(())
+/// # }
+/// # tls_config().unwrap();
+/// ```
+///
+/// [`TlsConfig`]: struct.TlsConfig.html
+#[derive(Default, Debug)]
+pub struct TlsConfigBuilder {
+    alpn: Option<String>,
+    ca: Option<KeyData>,
+    ciphers: Option<String>,
+    crl: Option<KeyData>,
+    dheparams: Option<String>,
+    ecdhecurves: Option<String>,
+    keypairs: Vec<KeyData>,
+    noverifycert: bool,
+    noverifyname: bool,
+    noverifytime: bool,
+    protocols: Option<u32>,
+    session_fd: Option<RawFd>,
+    session_id: Option<Vec<u8>>,
+    session_lifetime: Option<usize>,
+    ticket_key: HashMap<u32, Vec<u8>>,
+    verify: bool,
+    verify_client: bool,
+    verify_client_optional: bool,
+    verify_depth: Option<usize>,
+}
+
+impl TlsConfigBuilder {
+    /// Return new `TlsConfigBuilder`.
+    ///
+    /// # See also
+    ///
+    /// [`TlsConfig`](struct.TlsConfig.html)
+    pub fn new() -> Self {
+        Self {
+            ..Default::default()
+        }
+    }
+
+    /// Build new [`TlsConfig`] object.
+    ///
+    /// # See also
+    ///
+    /// [`TlsConfig`]
+    ///
+    /// [`TlsConfig`]: struct.TlsConfig.html
+    pub fn build(&self) -> error::Result<TlsConfig> {
+        let mut config = TlsConfig::new()?;
+
+        // First add the keypairs and optional OCSP staples.
+        for (i, kp) in self.keypairs.iter().enumerate() {
+            match kp {
+                KeyData::KeyPairMem(cert, key, ocsp) => {
+                    if let Some(ocsp) = ocsp {
+                        // Set the first keypair as the default.
+                        if i == 0 {
+                            config.set_keypair_ocsp_mem(cert, key, ocsp)?;
+                        }
+                        config.add_keypair_ocsp_mem(cert, key, ocsp)?;
+                    } else {
+                        if i == 0 {
+                            config.set_keypair_mem(cert, key)?;
+                        }
+                        config.add_keypair_mem(cert, key)?;
+                    }
+                }
+                KeyData::KeyPairFiles(cert, key, ocsp) => {
+                    if let Some(ocsp) = ocsp {
+                        if i == 0 {
+                            config.set_keypair_ocsp_file(cert, key, ocsp)?;
+                        }
+                        config.add_keypair_ocsp_file(cert, key, ocsp)?;
+                    } else {
+                        if i == 0 {
+                            config.set_keypair_file(cert, key)?;
+                        }
+                        config.add_keypair_file(cert, key)?;
+                    }
+                }
+                _ => Err(error::TlsError::NoError)?,
+            };
+        }
+
+        // Now all the other settings
+        if let Some(ref alpn) = self.alpn {
+            config.set_alpn(alpn)?;
+        }
+        if let Some(ref ca) = self.ca {
+            match ca {
+                KeyData::Mem(mem) => config.set_ca_mem(mem)?,
+                KeyData::File(file) => config.set_ca_file(file)?,
+                _ => Err(error::TlsError::NoError)?,
+            };
+        }
+        if let Some(ref ciphers) = self.ciphers {
+            config.set_ciphers(ciphers)?;
+        }
+        if let Some(ref crl) = self.crl {
+            match crl {
+                KeyData::Mem(mem) => config.set_ca_mem(mem)?,
+                KeyData::File(file) => config.set_ca_file(file)?,
+                _ => Err(error::TlsError::NoError)?,
+            };
+        }
+        if let Some(ref dheparams) = self.dheparams {
+            config.set_dheparams(dheparams)?;
+        }
+        if let Some(ref ecdhecurves) = self.ecdhecurves {
+            config.set_ecdhecurves(ecdhecurves)?;
+        }
+        if let Some(protocols) = self.protocols {
+            config.set_protocols(protocols)?;
+        }
+        if let Some(session_fd) = self.session_fd {
+            config.set_session_fd(session_fd)?;
+        }
+        if let Some(ref session_id) = self.session_id {
+            config.set_session_id(session_id)?;
+        }
+        if let Some(session_lifetime) = self.session_lifetime {
+            config.set_session_lifetime(session_lifetime)?;
+        }
+
+        // Add ticket keys
+        for (keyrev, key) in self.ticket_key.iter() {
+            // The tls_ticket_key() API is "broken" as it requires the key
+            // as mut and not const.
+            config.add_ticket_key(*keyrev, key.clone().as_mut_slice())?;
+        }
+
+        // Order verify_* calls in a safe priority.
+        if self.noverifycert {
+            config.insecure_noverifycert();
+        }
+        if self.noverifyname {
+            config.insecure_noverifyname();
+        }
+        if self.noverifytime {
+            config.insecure_noverifytime();
+        }
+        if let Some(verify_depth) = self.verify_depth {
+            config.set_verify_depth(verify_depth)?;
+        }
+        if self.verify_client_optional {
+            config.verify_client_optional();
+        }
+        if self.verify_client {
+            config.verify_client();
+        }
+        if self.verify {
+            config.verify();
+        }
+
+        Ok(config)
+    }
+
+    /// Set the ALPN protocols that are supported.
+    ///
+    /// # See also
+    ///
+    /// [`TlsConfig::set_alpn`](struct.TlsConfig.html#method.set_alpn)
+    pub fn alpn<'a>(&'a mut self, alpn: &str) -> &'a mut Self {
+        self.alpn = Some(alpn.to_owned());
+        self
+    }
+
+    /// Set the CA file.
+    ///
+    /// # See also
+    ///
+    /// [`TlsConfig::set_ca_file`](struct.TlsConfig.html#method.set_ca_file)
+    pub fn ca_file<'a, P: AsRef<Path>>(&'a mut self, path: P) -> &'a mut Self {
+        self.ca = Some(KeyData::File(path.as_ref().to_owned()));
+        self
+    }
+
+    /// Set the CA from memory.
+    ///
+    /// # See also
+    ///
+    /// [`TlsConfig::set_ca_mem`](struct.TlsConfig.html#method.set_ca_mem)
+    pub fn ca_mem<'a>(&'a mut self, mem: &[u8]) -> &'a mut Self {
+        self.ca = Some(KeyData::Mem(mem.to_vec()));
+        self
+    }
+
+    /// Set the list of cipher that may be used.
+    ///
+    /// # See also
+    ///
+    /// [`TlsConfig::set_ciphers`](struct.TlsConfig.html#method.set_ciphers)
+    pub fn ciphers<'a>(&'a mut self, ciphers: &str) -> &'a mut Self {
+        self.ciphers = Some(ciphers.to_owned());
+        self
+    }
+
+    /// Set the CRL file.
+    ///
+    /// # See also
+    ///
+    /// [`TlsConfig::set_crl_file`](struct.TlsConfig.html#method.set_crl_file)
+    pub fn crl_file<'a, P: AsRef<Path>>(&'a mut self, path: P) -> &'a mut Self {
+        self.crl = Some(KeyData::File(path.as_ref().to_owned()));
+        self
+    }
+
+    /// Set the CRL from memory.
+    ///
+    /// # See also
+    ///
+    /// [`TlsConfig::set_crl_mem`](struct.TlsConfig.html#method.set_crl_mem)
+    pub fn crl_mem<'a>(&'a mut self, mem: &[u8]) -> &'a mut Self {
+        self.crl = Some(KeyData::Mem(mem.to_vec()));
+        self
+    }
+
+    /// Set the parameters of an Diffie-Hellman Ephemeral (DHE) key exchange.
+    ///
+    /// # See also
+    ///
+    /// [`TlsConfig::set_dheparams`](struct.TlsConfig.html#method.set_dheparams)
+    pub fn dheparams<'a>(&'a mut self, dheparams: &str) -> &'a mut Self {
+        self.dheparams = Some(dheparams.to_owned());
+        self
+    }
+
+    /// Set the curves of an Elliptic Curve Diffie-Hellman Ephemeral (ECDHE) key exchange.
+    ///
+    /// # See also
+    ///
+    /// [`TlsConfig::set_ecdhecurves`](struct.TlsConfig.html#method.set_ecdhecurves)
+    pub fn ecdhecurves<'a>(&'a mut self, ecdhecurves: &str) -> &'a mut Self {
+        self.ecdhecurves = Some(ecdhecurves.to_owned());
+        self
+    }
+
+    /// Add additional files of a public and private key pair and OCSP staple.
+    ///
+    /// # See also
+    ///
+    /// [`TlsConfig::add_keypair_file`](struct.TlsConfig.html#method.add_keypair_ocsp_file),
+    /// [`TlsConfig::set_keypair_file`](struct.TlsConfig.html#method.set_keypair_ocsp_file)
+    pub fn keypair_file<'a, P: AsRef<Path>>(
+        &'a mut self,
+        cert: P,
+        key: P,
+        ocsp_staple: Option<P>,
+    ) -> &'a mut Self {
+        let certdata = cert.as_ref().to_owned();
+        let keydata = key.as_ref().to_owned();
+        let ocspdata = match ocsp_staple {
+            Some(path) => Some(path.as_ref().to_owned()),
+            None => None,
+        };
+        self.keypairs
+            .push(KeyData::KeyPairFiles(certdata, keydata, ocspdata));
+        self
+    }
+
+    /// Add an additional public and private key pair and OCSP staple from memory.
+    ///
+    /// # See also
+    ///
+    /// [`TlsConfig::set_keypair_mem`](struct.TlsConfig.html#method.add_keypair_ocsp_mem),
+    /// [`TlsConfig::set_keypair_mem`](struct.TlsConfig.html#method.set_keypair_ocsp_mem)
+    pub fn keypair_mem<'a>(
+        &'a mut self,
+        cert: &[u8],
+        key: &[u8],
+        ocsp_staple: Option<&[u8]>,
+    ) -> &'a mut Self {
+        let certdata = cert.to_vec();
+        let keydata = key.to_vec();
+        let ocspdata = match ocsp_staple {
+            Some(mem) => Some(mem.to_vec()),
+            None => None,
+        };
+        self.keypairs
+            .push(KeyData::KeyPairMem(certdata, keydata, ocspdata));
+        self
+    }
+
+    /// Disable certificate verification.
+    ///
+    /// # See also
+    ///
+    /// [`TlsConfig::insecure_noverifycert`](struct.TlsConfig.html#method.insecure_noverifycert)
+    pub fn noverifycert<'a>(&'a mut self) -> &'a mut Self {
+        self.noverifycert = true;
+        self
+    }
+
+    /// Disable server name verification.
+    ///
+    /// # See also
+    ///
+    /// [`TlsConfig::insecure_noverifyname`](struct.TlsConfig.html#method.insecure_noverifyname)
+    pub fn noverifyname<'a>(&'a mut self) -> &'a mut Self {
+        self.noverifyname = true;
+        self
+    }
+
+    /// Disable certificate validity checking.
+    ///
+    /// # See also
+    ///
+    /// [`TlsConfig::insecure_noverifytime`](struct.TlsConfig.html#method.insecure_noverifytime)
+    pub fn noverifytime<'a>(&'a mut self) -> &'a mut Self {
+        self.noverifytime = true;
+        self
+    }
+
+    /// Set which versions of the TLS protocol may be used.
+    ///
+    /// # See also
+    ///
+    /// [`TlsConfig::set_protocols`](struct.TlsConfig.html#method.set_protocols)
+    pub fn protocols<'a>(&'a mut self, protocols: u32) -> &'a mut Self {
+        self.protocols = Some(protocols);
+        self
+    }
+
+    /// Set a file descriptor to manage data for TLS sessions.
+    ///
+    /// # See also
+    ///
+    /// [`TlsConfig::set_session_fd`](struct.TlsConfig.html#method.set_session_fd)
+    pub fn session_fd<'a>(&'a mut self, fd: RawFd) -> &'a mut Self {
+        self.session_fd = Some(fd);
+        self
+    }
+
+    /// Set the session identifier for TLS sessions.
+    ///
+    /// # See also
+    ///
+    /// [`TlsConfig::set_session_id`](struct.TlsConfig.html#method.set_session_id)
+    pub fn session_id<'a>(&'a mut self, id: &[u8]) -> &'a mut Self {
+        self.session_id = Some(id.to_vec());
+        self
+    }
+
+    /// Set the lifetime for TLS sessions.
+    ///
+    /// # See also
+    ///
+    /// [`TlsConfig::set_session_lifetime`](struct.TlsConfig.html#method.set_session_lifetime)
+    pub fn session_lifetime<'a>(&'a mut self, lifetime: usize) -> &'a mut Self {
+        self.session_lifetime = Some(lifetime);
+        self
+    }
+
+    /// # See also
+    ///
+    /// [`TlsConfig::add_ticket_key`](struct.TlsConfig.html#method.add_ticket_key)
+    pub fn ticket_key<'a>(&'a mut self, keyrev: u32, key: &[u8]) -> &'a mut Self {
+        self.ticket_key.insert(keyrev, key.to_vec());
+        self
+    }
+
+    /// Enable all certificate verification.
+    ///
+    /// # See also
+    ///
+    /// [`TlsConfig::verify`](struct.TlsConfig.html#method.verify)
+    pub fn verify<'a>(&'a mut self) -> &'a mut Self {
+        self.verify = true;
+        self
+    }
+
+    /// Enable client certificate verification.
+    ///
+    /// # See also
+    ///
+    /// [`TlsConfig::verify_client`](struct.TlsConfig.html#method.verify_client)
+    pub fn verify_client<'a>(&'a mut self) -> &'a mut Self {
+        self.verify_client = true;
+        self
+    }
+
+    /// Enable optional client certificate verification.
+    ///
+    /// # See also
+    ///
+    /// [`TlsConfig::verify_client_optional`](struct.TlsConfig.html#method.verify_client_optional)
+    pub fn verify_client_optional<'a>(&'a mut self) -> &'a mut Self {
+        self.verify_client_optional = true;
+        self
+    }
+
+    /// Set the certificate verification depth.
+    ///
+    /// # See also
+    ///
+    /// [`TlsConfig::verify_depth`](struct.TlsConfig.html#method.verify_depth)
+    pub fn verify_depth<'a>(&'a mut self, depth: usize) -> &'a mut Self {
+        self.verify_depth = Some(depth);
+        self
+    }
 }

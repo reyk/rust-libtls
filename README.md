@@ -19,7 +19,7 @@ This crate provides Rust language bindings for [libtls] only, as the other
 [LibreSSL] APIs can be used with the existing [rust-openssl] crate.
 [LibreSSL] versions 2.9.0 through 3.0.2 (or later) are supported.
 
-## Example
+## Examples
 
 ```rust
 use libtls::config::{self, TlsConfig};
@@ -33,6 +33,19 @@ fn tls_server_config() -> error::Result<TlsConfig> {
 
 fn main() {
     let tls_config = tls_server_config().unwrap();
+}
+```
+
+The same configuration can be created using the `TlsConfigBuilder`
+builder pattern:
+
+```rust
+fn tls_server_config() -> error::Result<TlsConfig> {
+    let tls_config = TlsConfigBuilder::new()
+        .keypair_file("tests/eccert.crt", "tests/eccert.key", None)
+        .protocols(libtls_sys::TLS_PROTOCOL_TLSv1_2)
+        .build()?;
+    Ok(tls_config)
 }
 ```
 
