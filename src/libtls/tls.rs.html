@@ -874,6 +874,79 @@
 <span id="874">874</span>
 <span id="875">875</span>
 <span id="876">876</span>
+<span id="877">877</span>
+<span id="878">878</span>
+<span id="879">879</span>
+<span id="880">880</span>
+<span id="881">881</span>
+<span id="882">882</span>
+<span id="883">883</span>
+<span id="884">884</span>
+<span id="885">885</span>
+<span id="886">886</span>
+<span id="887">887</span>
+<span id="888">888</span>
+<span id="889">889</span>
+<span id="890">890</span>
+<span id="891">891</span>
+<span id="892">892</span>
+<span id="893">893</span>
+<span id="894">894</span>
+<span id="895">895</span>
+<span id="896">896</span>
+<span id="897">897</span>
+<span id="898">898</span>
+<span id="899">899</span>
+<span id="900">900</span>
+<span id="901">901</span>
+<span id="902">902</span>
+<span id="903">903</span>
+<span id="904">904</span>
+<span id="905">905</span>
+<span id="906">906</span>
+<span id="907">907</span>
+<span id="908">908</span>
+<span id="909">909</span>
+<span id="910">910</span>
+<span id="911">911</span>
+<span id="912">912</span>
+<span id="913">913</span>
+<span id="914">914</span>
+<span id="915">915</span>
+<span id="916">916</span>
+<span id="917">917</span>
+<span id="918">918</span>
+<span id="919">919</span>
+<span id="920">920</span>
+<span id="921">921</span>
+<span id="922">922</span>
+<span id="923">923</span>
+<span id="924">924</span>
+<span id="925">925</span>
+<span id="926">926</span>
+<span id="927">927</span>
+<span id="928">928</span>
+<span id="929">929</span>
+<span id="930">930</span>
+<span id="931">931</span>
+<span id="932">932</span>
+<span id="933">933</span>
+<span id="934">934</span>
+<span id="935">935</span>
+<span id="936">936</span>
+<span id="937">937</span>
+<span id="938">938</span>
+<span id="939">939</span>
+<span id="940">940</span>
+<span id="941">941</span>
+<span id="942">942</span>
+<span id="943">943</span>
+<span id="944">944</span>
+<span id="945">945</span>
+<span id="946">946</span>
+<span id="947">947</span>
+<span id="948">948</span>
+<span id="949">949</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) 2019 Reyk Floeter &lt;contact@reykfloeter.com&gt;</span>
 <span class="comment">//</span>
@@ -1267,12 +1340,12 @@
 
     <span class="doccomment">/// Explicitly perform the TLS handshake.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// The `handshake` method explicitly performs the TLS handshake.  It is only</span>
+    <span class="doccomment">/// The `tls_handshake` method explicitly performs the TLS handshake.  It is only</span>
     <span class="doccomment">/// necessary to call this method if you need to guarantee that the</span>
-    <span class="doccomment">/// handshake has completed, as both [`read`] and [`write`] automatically</span>
+    <span class="doccomment">/// handshake has completed, as both [`tls_read`] and [`tls_write`] automatically</span>
     <span class="doccomment">/// perform the TLS handshake when necessary.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// The [`read`], [`write`], `handshake`, and [`close`] methods return</span>
+    <span class="doccomment">/// The [`tls_read`], [`tls_write`], `tls_handshake`, and [`close`] methods return</span>
     <span class="doccomment">/// -1 on error and also have two special return values:</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// * [`TLS_WANT_POLLIN`]: The underlying read file descriptor needs to be</span>
@@ -1285,34 +1358,39 @@
     <span class="doccomment">/// the same function call should be repeated when the required condition has</span>
     <span class="doccomment">/// been met.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// On success, the [`read`] and [`write`] methods return a size and</span>
-    <span class="doccomment">/// the `handshake` and [`close`] methods return 0.</span>
+    <span class="doccomment">/// On success, the [`tls_read`] and [`tls_write`] methods return a size and</span>
+    <span class="doccomment">/// the `tls_handshake` and [`close`] methods return 0.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// # See also</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// [`tls_handshake(3)`](https://man.openbsd.org/tls_handshake.3)</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// [`read`]: #method.read</span>
-    <span class="doccomment">/// [`write`]: #method.write</span>
+    <span class="doccomment">/// [`tls_read`]: #method.tls_read</span>
+    <span class="doccomment">/// [`tls_write`]: #method.tls_write</span>
     <span class="doccomment">/// [`close`]: #method.close</span>
     <span class="doccomment">/// [`TLS_WANT_POLLIN`]: ../constant.TLS_WANT_POLLIN.html</span>
     <span class="doccomment">/// [`TLS_WANT_POLLOUT`]: ../constant.TLS_WANT_POLLOUT.html</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">handshake</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">isize</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">tls_handshake</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">isize</span><span class="op">&gt;</span> {
         <span class="ident">cvt_err</span>(<span class="self">self</span>, <span class="kw">unsafe</span> { <span class="ident">libtls</span>::<span class="ident">tls_handshake</span>(<span class="self">self</span>.<span class="number">0</span>) <span class="kw">as</span> <span class="ident">isize</span> })
     }
 
     <span class="doccomment">/// Read bytes from the TLS connection.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// The `read` method reads bytes of data from the connection into `buf`.  It</span>
-    <span class="doccomment">/// returns the amount of data read or an error as described in [`handshake`].</span>
+    <span class="doccomment">/// The `tls_read` method reads bytes of data from the connection into `buf`.  It</span>
+    <span class="doccomment">/// returns the amount of data read or an error as described in [`tls_handshake`].</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// This function is provided for the completeness of the API, programs should</span>
+    <span class="doccomment">/// use the implemented [`read`] function of the `Read` trait instead.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// # See also</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// [`handshake`],</span>
+    <span class="doccomment">/// [`tls_handshake`],</span>
+    <span class="doccomment">/// [`read`],</span>
     <span class="doccomment">/// [`tls_read(3)`](https://man.openbsd.org/tls_read.3)</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// [`handshake`]: #method.handshake</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">buf</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> [<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">isize</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// [`read`]: #impl-Read</span>
+    <span class="doccomment">/// [`tls_handshake`]: #method.tls_handshake</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">tls_read</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">buf</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> [<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">isize</span><span class="op">&gt;</span> {
         <span class="ident">cvt_err</span>(<span class="self">self</span>, <span class="kw">unsafe</span> {
             <span class="ident">libtls</span>::<span class="ident">tls_read</span>(<span class="self">self</span>.<span class="number">0</span>, <span class="ident">buf</span>.<span class="ident">as_mut_ptr</span>() <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">c_void</span>, <span class="ident">buf</span>.<span class="ident">len</span>())
         })
@@ -1320,16 +1398,21 @@
 
     <span class="doccomment">/// Write bytes to the TLS connection.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// The `write` method writes bytes of data from `buf` to connection.  It</span>
-    <span class="doccomment">/// returns the amount of data written or an error as described in [`handshake`].</span>
+    <span class="doccomment">/// The `tls_write` method writes bytes of data from `buf` to connection.  It</span>
+    <span class="doccomment">/// returns the amount of data written or an error as described in [`tls_handshake`].</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// This function is provided for the completeness of the API, programs should</span>
+    <span class="doccomment">/// use the implemented [`write`] function of the `Write` trait instead.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// # See also</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// [`handshake`],</span>
+    <span class="doccomment">/// [`tls_handshake`],</span>
+    <span class="doccomment">/// [`write`],</span>
     <span class="doccomment">/// [`tls_write(3)`](https://man.openbsd.org/tls_write.3)</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// [`handshake`]: #method.handshake</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">buf</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">isize</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// [`write`]: #impl-Write</span>
+    <span class="doccomment">/// [`tls_handshake`]: #method.tls_handshake</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">tls_write</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">buf</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">isize</span><span class="op">&gt;</span> {
         <span class="ident">cvt_err</span>(<span class="self">self</span>, <span class="kw">unsafe</span> {
             <span class="ident">libtls</span>::<span class="ident">tls_write</span>(<span class="self">self</span>.<span class="number">0</span>, <span class="ident">buf</span>.<span class="ident">as_ptr</span>() <span class="kw">as</span> <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">c_void</span>, <span class="ident">buf</span>.<span class="ident">len</span>())
         })
@@ -1342,14 +1425,14 @@
     <span class="doccomment">/// unless the connection was established using [`connect`] or</span>
     <span class="doccomment">/// [`connect_servername`]__.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// It returns 0 on success or an error as decribed in [`handshake`].</span>
+    <span class="doccomment">/// It returns 0 on success or an error as decribed in [`tls_handshake`].</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// # See also</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// [`handshake`],</span>
+    <span class="doccomment">/// [`tls_handshake`],</span>
     <span class="doccomment">/// [`tls_write(3)`](https://man.openbsd.org/tls_write.3)</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// [`handshake`]: #method.handshake</span>
+    <span class="doccomment">/// [`tls_handshake`]: #method.tls_handshake</span>
     <span class="doccomment">/// [`connect`]: #method.connect</span>
     <span class="doccomment">/// [`connect_servername`]: #method.connect_servername</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">close</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">isize</span><span class="op">&gt;</span> {
@@ -1673,8 +1756,8 @@
     <span class="doccomment">/// Returns the last error of the TLS context.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// The `last_error` method returns an error if no error occurred with</span>
-    <span class="doccomment">/// the TLS context during or since the last call to `handshake`,</span>
-    <span class="doccomment">/// `read`, `write`, `close`, or `reset` involving the context,</span>
+    <span class="doccomment">/// the TLS context during or since the last call to `tls_handshake`,</span>
+    <span class="doccomment">/// `read`, `tls_write`, `close`, or `reset` involving the context,</span>
     <span class="doccomment">/// or if memory allocation failed while trying to assemble the string</span>
     <span class="doccomment">/// describing the most recent error related to the context.</span>
     <span class="doccomment">///</span>
@@ -1734,6 +1817,69 @@
             }
             <span class="ident">libtls</span>::<span class="ident">tls_free</span>(<span class="self">self</span>.<span class="number">0</span>);
         };
+    }
+}
+
+<span class="doccomment">/// Convert return value of `Tls` I/O functions into `io::Error`.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// This macro converts the return value of [`Tls::tls_read`], [`Tls::tls_write`],</span>
+<span class="doccomment">/// [`Tls::tls_handshake`], or [`Tls::close`] into [`io::Error`].</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// # See also</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// [`Tls::tls_handshake`]</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// [`Tls::tls_read`]: tls/struct.Tls.html#method.tls_read</span>
+<span class="doccomment">/// [`Tls::tls_write`]: tls/struct.Tls.html#method.tls_write</span>
+<span class="doccomment">/// [`Tls::tls_handshake`]: tls/struct.Tls.html#method.tls_handshake</span>
+<span class="doccomment">/// [`Tls::close`]: tls/struct.Tls.html#method.close</span>
+<span class="doccomment">/// [`io::Error`]: https://doc.rust-lang.org/std/io/struct.Error.html</span>
+<span class="attribute">#[<span class="ident">macro_export</span>]</span>
+<span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">try_tls</span> {
+    (<span class="macro-nonterminal">$</span><span class="self">self</span>: <span class="macro-nonterminal">expr</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">call</span>: <span class="ident">expr</span>) <span class="op">=</span><span class="op">&gt;</span> {
+        <span class="kw">match</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">call</span> {
+            <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">Other</span>, <span class="ident">err</span>)),
+            <span class="prelude-val">Ok</span>(<span class="ident">size</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">if</span> <span class="ident">size</span> <span class="op">=</span><span class="op">=</span> <span class="ident">TLS_WANT_POLLIN</span> <span class="kw">as</span> <span class="ident">isize</span> <span class="op">|</span><span class="op">|</span> <span class="ident">size</span> <span class="op">=</span><span class="op">=</span> <span class="ident">TLS_WANT_POLLOUT</span> <span class="kw">as</span> <span class="ident">isize</span> {
+                    <span class="prelude-val">Err</span>(<span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(
+                        <span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">WouldBlock</span>,
+                        <span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">last_os_error</span>(),
+                    ))
+                } <span class="kw">else</span> {
+                    <span class="prelude-val">Ok</span>(<span class="ident">size</span> <span class="kw">as</span> <span class="ident">usize</span>)
+                }
+            }
+        }
+    };
+}
+
+<span class="kw">impl</span> <span class="ident">io</span>::<span class="ident">Read</span> <span class="kw">for</span> <span class="ident">Tls</span> {
+    <span class="doccomment">/// Read from the TLS connection.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// The `read` method reads bytes of data from the connection into `buf`.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// # See also</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// [`tls_read`](#method.tls_read)</span>
+    <span class="kw">fn</span> <span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">buf</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> [<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> {
+        <span class="macro">try_tls</span><span class="macro">!</span>(<span class="self">self</span>, <span class="self">self</span>.<span class="ident">tls_read</span>(<span class="ident">buf</span>))
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">io</span>::<span class="ident">Write</span> <span class="kw">for</span> <span class="ident">Tls</span> {
+    <span class="doccomment">/// Write to the TLS connection.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// The `write` method writes bytes of data from `buf` to the connection.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// # See also</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// [`tls_write`](#method.tls_write)</span>
+    <span class="kw">fn</span> <span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">buf</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> {
+        <span class="macro">try_tls</span><span class="macro">!</span>(<span class="self">self</span>, <span class="self">self</span>.<span class="ident">tls_write</span>(<span class="ident">buf</span>))
+    }
+
+    <span class="kw">fn</span> <span class="ident">flush</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="prelude-val">Ok</span>(())
     }
 }
 

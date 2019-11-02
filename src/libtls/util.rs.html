@@ -209,6 +209,8 @@
 <span id="209">209</span>
 <span id="210">210</span>
 <span id="211">211</span>
+<span id="212">212</span>
+<span id="213">213</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) 2019 Reyk Floeter &lt;contact@reykfloeter.com&gt;</span>
 <span class="comment">//</span>
@@ -235,6 +237,8 @@
 
 <span class="kw">use</span> <span class="kw">super</span>::<span class="ident">config</span>::<span class="ident">TlsConfig</span>;
 <span class="kw">use</span> <span class="kw">super</span>::<span class="ident">error</span>::{<span class="ident">LastError</span>, <span class="prelude-ty">Result</span>, <span class="ident">TlsError</span>};
+
+<span class="doccomment">/// XXX Convert functions into macros.</span>
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">call_file1</span><span class="op">&lt;</span><span class="ident">P</span>: <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">Path</span><span class="op">&gt;</span><span class="op">&gt;</span>(
     <span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">TlsConfig</span>,
@@ -365,6 +369,16 @@
     }
 }
 
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">cvt_io</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">E</span><span class="op">&gt;</span>(<span class="ident">ok</span>: <span class="ident">T</span>, <span class="ident">retval</span>: <span class="ident">c_int</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">std</span>::<span class="ident">result</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">E</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">E</span>: <span class="ident">std</span>::<span class="ident">convert</span>::<span class="ident">From</span><span class="op">&lt;</span><span class="ident">io</span>::<span class="ident">Error</span><span class="op">&gt;</span>,
+{
+    <span class="kw">match</span> <span class="ident">retval</span> {
+        <span class="op">-</span><span class="number">1</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">last_os_error</span>().<span class="ident">into</span>()),
+        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">ok</span>),
+    }
+}
+
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">cvt_time</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>(<span class="ident">object</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">E</span>, <span class="ident">itime</span>: <span class="ident">time_t</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SystemTime</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">E</span>: <span class="ident">LastError</span>,
@@ -394,16 +408,6 @@
         <span class="kw">let</span> <span class="ident">c_str</span> <span class="op">=</span> <span class="ident">CStr</span>::<span class="ident">from_ptr</span>(<span class="ident">retval</span>);
         <span class="kw">let</span> <span class="ident">string</span> <span class="op">=</span> <span class="ident">c_str</span>.<span class="ident">to_owned</span>().<span class="ident">to_string_lossy</span>().<span class="ident">to_string</span>();
         <span class="prelude-val">Ok</span>(<span class="ident">string</span>)
-    }
-}
-
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">cvt_io</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">E</span><span class="op">&gt;</span>(<span class="ident">ok</span>: <span class="ident">T</span>, <span class="ident">retval</span>: <span class="ident">c_int</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">std</span>::<span class="ident">result</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">E</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">E</span>: <span class="ident">std</span>::<span class="ident">convert</span>::<span class="ident">From</span><span class="op">&lt;</span><span class="ident">io</span>::<span class="ident">Error</span><span class="op">&gt;</span>,
-{
-    <span class="kw">match</span> <span class="ident">retval</span> {
-        <span class="op">-</span><span class="number">1</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">last_os_error</span>().<span class="ident">into</span>()),
-        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">ok</span>),
     }
 }
 
