@@ -16,7 +16,51 @@ extern crate bindgen;
 extern crate pkg_config;
 
 use std::env;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::process::Command;
+
+#[cfg(target_os = "openbsd")]
+fn libressl() -> Vec<String> {
+    // OpenBSD doesn't install libtls.pc
+    println!("cargo:rustc-link-lib=tls");
+    println!("cargo:rustc-link-lib=ssl");
+    println!("cargo:rustc-link-lib=crypto");
+    vec!["-I/usr/include".to_owned()]
+}
+
+#[cfg(not(target_os = "openbsd"))]
+fn libressl() -> Vec<String> {
+    if !Path::new("libressl-portable").exists() {
+        Command::new("git")
+            .args(&["submodule", "update", "--init"])
+            .status()
+            .unwrap();
+    }
+
+    let curdir = env::current_dir().unwrap();
+    env::set_var("LIBRESSL_DIR", format!("{}/libressl", curdir.display()));
+    env::set_current_dir("libressl-portable").unwrap();
+    for cmd in [
+        "./autogen.sh",
+        "./configure --prefix=$LIBRESSL_DIR --with-openssldir=$LIBRESSL_DIR",
+        "make",
+        "make install",
+    ]
+    .iter()
+    {
+        Command::new("sh").arg("-c").arg(cmd).status().unwrap();
+    }
+    env::set_current_dir(&curdir).unwrap();
+
+    println!(
+        "cargo:rustc-link-search=native={}/libressl/lib",
+        curdir.display()
+    );
+    println!("cargo:rustc-link-lib=static=tls");
+    println!("cargo:rustc-link-lib=static=ssl");
+    println!("cargo:rustc-link-lib=static=crypto");
+    vec!["-Ilibressl/include".to_owned()]
+}
 
 fn main() {
     // First try to find libtls via pkg-config -
@@ -42,13 +86,7 @@ fn main() {
             );
             cflags
         }
-        Err(_) => {
-            // OpenBSD doesn't install libtls.pc
-            println!("cargo:rustc-link-lib=tls");
-            println!("cargo:rustc-link-lib=ssl");
-            println!("cargo:rustc-link-lib=crypto");
-            vec!["-I/usr/include".to_owned()]
-        }
+        Err(_) => libressl(),
     };
 
     // Track custom changes

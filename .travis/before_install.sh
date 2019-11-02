@@ -3,6 +3,8 @@
 set -e
 set -x
 
+[ -z "${LIBRESSL_DIR}" ] && exit 0
+
 mkdir -p "${LIBRESSL_DIR}"
 cd "${LIBRESSL_DIR}"
 

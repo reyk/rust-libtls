@@ -1,0 +1,3 @@
+[submodule "libtls-sys/libressl-portable"]
+	path = libtls-sys/libressl-portable
+	url = https://github.com/libressl-portable/portable.git

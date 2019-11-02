@@ -6,6 +6,6 @@ rust:
   - nightly
 env:
   - LIBRESSL="3.0.2" LIBRESSL_DIR="$TRAVIS_HOME/$LIBRESSL" PKG_CONFIG_PATH="$LIBRESSL_DIR/lib/pkgconfig"
-  - LIBRESSL="2.9.0" LIBRESSL_DIR="$TRAVIS_HOME/$LIBRESSL" PKG_CONFIG_PATH="$LIBRESSL_DIR/lib/pkgconfig"
+  - LIBRESSL_DIR=""
 before_install:
   - sudo ./.travis/before_install.sh
