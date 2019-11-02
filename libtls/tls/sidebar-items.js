@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Tls","TLS connection clients and servers."]],"type":[["TlsReadCb","Read callback for [`Tls::accept_cbs`] and [`Tls::connect_cbs`]."],["TlsWriteCb","Write callback for [`Tls::accept_cbs`] and [`Tls::connect_cbs`]."]]});
