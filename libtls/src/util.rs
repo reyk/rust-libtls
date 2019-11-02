@@ -130,7 +130,9 @@ where
             // we store the actual error as a String.  This needs a bit more
             // memory but it is safe to transfer the error between threads and
             // to use it later, even after the config or TLS object is dropped.
-            let errstr = object.last_error().unwrap_or("no error".to_string());
+            let errstr = object
+                .last_error()
+                .unwrap_or_else(|_| "no error".to_string());
             E::to_error(errstr)
         }
         _ => Ok(()),
@@ -142,7 +144,9 @@ where
     E: LastError,
 {
     if retval == -1 {
-        let errstr = object.last_error().unwrap_or("no error".to_string());
+        let errstr = object
+            .last_error()
+            .unwrap_or_else(|_| "no error".to_string());
         E::to_error(errstr)
     } else {
         Ok(retval)
@@ -154,7 +158,9 @@ where
     E: LastError,
 {
     if itime < 0 {
-        let errstr = object.last_error().unwrap_or("no error".to_string());
+        let errstr = object
+            .last_error()
+            .unwrap_or_else(|_| "no error".to_string());
         E::to_error(errstr)
     } else {
         let utime: u64 = itime.try_into()?;
@@ -168,7 +174,9 @@ where
     E: LastError,
 {
     if retval.is_null() {
-        let errstr = object.last_error().unwrap_or("no error".to_string());
+        let errstr = object
+            .last_error()
+            .unwrap_or_else(|_| "no error".to_string());
         E::to_error(errstr)
     } else {
         let c_str = CStr::from_ptr(retval);

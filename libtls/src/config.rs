@@ -478,7 +478,7 @@ impl TlsConfig {
 
     /// The `set_ecdhecurve` method was replaced by [set_ecdhecurves](#method.set_ecdhecurves).
     #[deprecated(
-        since = "LibreSSL 2.6.1",
+        since = "2.6.1-LibreSSL",
         note = "Replaced by [set_ecdhecurves](#method.set_ecdhecurves)."
     )]
     pub fn set_ecdhecurve(&mut self, ecdhecurve: &str) -> error::Result<()> {
@@ -1245,38 +1245,7 @@ impl TlsConfigBuilder {
         let mut config = TlsConfig::new()?;
 
         // First add the keypairs and optional OCSP staples.
-        for (i, kp) in self.keypairs.iter().enumerate() {
-            match kp {
-                KeyData::KeyPairMem(cert, key, ocsp) => {
-                    if let Some(ocsp) = ocsp {
-                        // Set the first keypair as the default.
-                        if i == 0 {
-                            config.set_keypair_ocsp_mem(cert, key, ocsp)?;
-                        }
-                        config.add_keypair_ocsp_mem(cert, key, ocsp)?;
-                    } else {
-                        if i == 0 {
-                            config.set_keypair_mem(cert, key)?;
-                        }
-                        config.add_keypair_mem(cert, key)?;
-                    }
-                }
-                KeyData::KeyPairFiles(cert, key, ocsp) => {
-                    if let Some(ocsp) = ocsp {
-                        if i == 0 {
-                            config.set_keypair_ocsp_file(cert, key, ocsp)?;
-                        }
-                        config.add_keypair_ocsp_file(cert, key, ocsp)?;
-                    } else {
-                        if i == 0 {
-                            config.set_keypair_file(cert, key)?;
-                        }
-                        config.add_keypair_file(cert, key)?;
-                    }
-                }
-                _ => Err(error::TlsError::NoError)?,
-            };
-        }
+        self.build_keypairs(&mut config)?;
 
         // Now all the other settings
         if let Some(ref alpn) = self.alpn {
@@ -1287,7 +1256,7 @@ impl TlsConfigBuilder {
                 KeyData::Mem(mem) => config.set_ca_mem(mem)?,
                 KeyData::File(file) => config.set_ca_file(file)?,
                 KeyData::Path(path) => config.set_ca_path(path)?,
-                _ => Err(error::TlsError::NoError)?,
+                _ => return Err(error::TlsError::NoError),
             };
         }
         if let Some(ref ciphers) = self.ciphers {
@@ -1297,7 +1266,7 @@ impl TlsConfigBuilder {
             match crl {
                 KeyData::Mem(mem) => config.set_ca_mem(mem)?,
                 KeyData::File(file) => config.set_ca_file(file)?,
-                _ => Err(error::TlsError::NoError)?,
+                _ => return Err(error::TlsError::NoError),
             };
         }
         if let Some(ref dheparams) = self.dheparams {
@@ -1352,6 +1321,43 @@ impl TlsConfigBuilder {
         Ok(config)
     }
 
+    fn build_keypairs(&self, config: &mut TlsConfig) -> error::Result<()> {
+        for (i, kp) in self.keypairs.iter().enumerate() {
+            match kp {
+                KeyData::KeyPairMem(cert, key, ocsp) => {
+                    if let Some(ocsp) = ocsp {
+                        // Set the first keypair as the default.
+                        if i == 0 {
+                            config.set_keypair_ocsp_mem(cert, key, ocsp)?;
+                        }
+                        config.add_keypair_ocsp_mem(cert, key, ocsp)?;
+                    } else {
+                        if i == 0 {
+                            config.set_keypair_mem(cert, key)?;
+                        }
+                        config.add_keypair_mem(cert, key)?;
+                    }
+                }
+                KeyData::KeyPairFiles(cert, key, ocsp) => {
+                    if let Some(ocsp) = ocsp {
+                        if i == 0 {
+                            config.set_keypair_ocsp_file(cert, key, ocsp)?;
+                        }
+                        config.add_keypair_ocsp_file(cert, key, ocsp)?;
+                    } else {
+                        if i == 0 {
+                            config.set_keypair_file(cert, key)?;
+                        }
+                        config.add_keypair_file(cert, key)?;
+                    }
+                }
+                _ => return Err(error::TlsError::NoError),
+            };
+        }
+
+        Ok(())
+    }
+
     /// Build new [`TlsConfig`] object and return a configured [`Tls`] client.
     ///
     /// # See also
@@ -1387,7 +1393,7 @@ impl TlsConfigBuilder {
     /// # See also
     ///
     /// [`TlsConfig::set_alpn`](struct.TlsConfig.html#method.set_alpn)
-    pub fn alpn<'a>(&'a mut self, alpn: &str) -> &'a mut Self {
+    pub fn alpn(&'_ mut self, alpn: &str) -> &'_ mut Self {
         self.alpn = Some(alpn.to_owned());
         self
     }
@@ -1397,7 +1403,7 @@ impl TlsConfigBuilder {
     /// # See also
     ///
     /// [`TlsConfig::set_ca_file`](struct.TlsConfig.html#method.set_ca_file)
-    pub fn ca_file<'a, P: AsRef<Path>>(&'a mut self, path: P) -> &'a mut Self {
+    pub fn ca_file<P: AsRef<Path>>(&'_ mut self, path: P) -> &'_ mut Self {
         self.ca = Some(KeyData::File(path.as_ref().to_owned()));
         self
     }
@@ -1407,7 +1413,7 @@ impl TlsConfigBuilder {
     /// # See also
     ///
     /// [`TlsConfig::set_ca_path`](struct.TlsConfig.html#method.set_ca_path)
-    pub fn ca_path<'a, P: AsRef<Path>>(&'a mut self, path: P) -> &'a mut Self {
+    pub fn ca_path<P: AsRef<Path>>(&'_ mut self, path: P) -> &'_ mut Self {
         self.ca = Some(KeyData::Path(path.as_ref().to_owned()));
         self
     }
@@ -1417,7 +1423,7 @@ impl TlsConfigBuilder {
     /// # See also
     ///
     /// [`TlsConfig::set_ca_mem`](struct.TlsConfig.html#method.set_ca_mem)
-    pub fn ca_mem<'a>(&'a mut self, mem: &[u8]) -> &'a mut Self {
+    pub fn ca_mem(&'_ mut self, mem: &[u8]) -> &'_ mut Self {
         self.ca = Some(KeyData::Mem(mem.to_vec()));
         self
     }
@@ -1427,7 +1433,7 @@ impl TlsConfigBuilder {
     /// # See also
     ///
     /// [`TlsConfig::set_ciphers`](struct.TlsConfig.html#method.set_ciphers)
-    pub fn ciphers<'a>(&'a mut self, ciphers: &str) -> &'a mut Self {
+    pub fn ciphers(&'_ mut self, ciphers: &str) -> &'_ mut Self {
         self.ciphers = Some(ciphers.to_owned());
         self
     }
@@ -1437,7 +1443,7 @@ impl TlsConfigBuilder {
     /// # See also
     ///
     /// [`TlsConfig::set_crl_file`](struct.TlsConfig.html#method.set_crl_file)
-    pub fn crl_file<'a, P: AsRef<Path>>(&'a mut self, path: P) -> &'a mut Self {
+    pub fn crl_file<P: AsRef<Path>>(&'_ mut self, path: P) -> &'_ mut Self {
         self.crl = Some(KeyData::File(path.as_ref().to_owned()));
         self
     }
@@ -1447,7 +1453,7 @@ impl TlsConfigBuilder {
     /// # See also
     ///
     /// [`TlsConfig::set_crl_mem`](struct.TlsConfig.html#method.set_crl_mem)
-    pub fn crl_mem<'a>(&'a mut self, mem: &[u8]) -> &'a mut Self {
+    pub fn crl_mem(&'_ mut self, mem: &[u8]) -> &'_ mut Self {
         self.crl = Some(KeyData::Mem(mem.to_vec()));
         self
     }
@@ -1457,7 +1463,7 @@ impl TlsConfigBuilder {
     /// # See also
     ///
     /// [`TlsConfig::set_dheparams`](struct.TlsConfig.html#method.set_dheparams)
-    pub fn dheparams<'a>(&'a mut self, dheparams: &str) -> &'a mut Self {
+    pub fn dheparams(&'_ mut self, dheparams: &str) -> &'_ mut Self {
         self.dheparams = Some(dheparams.to_owned());
         self
     }
@@ -1467,7 +1473,7 @@ impl TlsConfigBuilder {
     /// # See also
     ///
     /// [`TlsConfig::set_ecdhecurves`](struct.TlsConfig.html#method.set_ecdhecurves)
-    pub fn ecdhecurves<'a>(&'a mut self, ecdhecurves: &str) -> &'a mut Self {
+    pub fn ecdhecurves(&'_ mut self, ecdhecurves: &str) -> &'_ mut Self {
         self.ecdhecurves = Some(ecdhecurves.to_owned());
         self
     }
@@ -1478,12 +1484,12 @@ impl TlsConfigBuilder {
     ///
     /// [`TlsConfig::add_keypair_file`](struct.TlsConfig.html#method.add_keypair_ocsp_file),
     /// [`TlsConfig::set_keypair_file`](struct.TlsConfig.html#method.set_keypair_ocsp_file)
-    pub fn keypair_file<'a, P: AsRef<Path>>(
-        &'a mut self,
+    pub fn keypair_file<P: AsRef<Path>>(
+        &'_ mut self,
         cert: P,
         key: P,
         ocsp_staple: Option<P>,
-    ) -> &'a mut Self {
+    ) -> &'_ mut Self {
         let certdata = cert.as_ref().to_owned();
         let keydata = key.as_ref().to_owned();
         let ocspdata = match ocsp_staple {
@@ -1501,12 +1507,12 @@ impl TlsConfigBuilder {
     ///
     /// [`TlsConfig::set_keypair_mem`](struct.TlsConfig.html#method.add_keypair_ocsp_mem),
     /// [`TlsConfig::set_keypair_mem`](struct.TlsConfig.html#method.set_keypair_ocsp_mem)
-    pub fn keypair_mem<'a>(
-        &'a mut self,
+    pub fn keypair_mem(
+        &'_ mut self,
         cert: &[u8],
         key: &[u8],
         ocsp_staple: Option<&[u8]>,
-    ) -> &'a mut Self {
+    ) -> &'_ mut Self {
         let certdata = cert.to_vec();
         let keydata = key.to_vec();
         let ocspdata = match ocsp_staple {
@@ -1523,7 +1529,7 @@ impl TlsConfigBuilder {
     /// # See also
     ///
     /// [`TlsConfig::insecure_noverifycert`](struct.TlsConfig.html#method.insecure_noverifycert)
-    pub fn noverifycert<'a>(&'a mut self) -> &'a mut Self {
+    pub fn noverifycert(&'_ mut self) -> &'_ mut Self {
         self.noverifycert = true;
         self
     }
@@ -1533,7 +1539,7 @@ impl TlsConfigBuilder {
     /// # See also
     ///
     /// [`TlsConfig::insecure_noverifyname`](struct.TlsConfig.html#method.insecure_noverifyname)
-    pub fn noverifyname<'a>(&'a mut self) -> &'a mut Self {
+    pub fn noverifyname(&'_ mut self) -> &'_ mut Self {
         self.noverifyname = true;
         self
     }
@@ -1543,7 +1549,7 @@ impl TlsConfigBuilder {
     /// # See also
     ///
     /// [`TlsConfig::insecure_noverifytime`](struct.TlsConfig.html#method.insecure_noverifytime)
-    pub fn noverifytime<'a>(&'a mut self) -> &'a mut Self {
+    pub fn noverifytime(&'_ mut self) -> &'_ mut Self {
         self.noverifytime = true;
         self
     }
@@ -1553,7 +1559,7 @@ impl TlsConfigBuilder {
     /// # See also
     ///
     /// [`TlsConfig::set_protocols`](struct.TlsConfig.html#method.set_protocols)
-    pub fn protocols<'a>(&'a mut self, protocols: u32) -> &'a mut Self {
+    pub fn protocols(&'_ mut self, protocols: u32) -> &'_ mut Self {
         self.protocols = Some(protocols);
         self
     }
@@ -1563,7 +1569,7 @@ impl TlsConfigBuilder {
     /// # See also
     ///
     /// [`TlsConfig::set_session_fd`](struct.TlsConfig.html#method.set_session_fd)
-    pub fn session_fd<'a>(&'a mut self, fd: RawFd) -> &'a mut Self {
+    pub fn session_fd(&'_ mut self, fd: RawFd) -> &'_ mut Self {
         self.session_fd = Some(fd);
         self
     }
@@ -1573,7 +1579,7 @@ impl TlsConfigBuilder {
     /// # See also
     ///
     /// [`TlsConfig::set_session_id`](struct.TlsConfig.html#method.set_session_id)
-    pub fn session_id<'a>(&'a mut self, id: &[u8]) -> &'a mut Self {
+    pub fn session_id(&'_ mut self, id: &[u8]) -> &'_ mut Self {
         self.session_id = Some(id.to_vec());
         self
     }
@@ -1583,7 +1589,7 @@ impl TlsConfigBuilder {
     /// # See also
     ///
     /// [`TlsConfig::set_session_lifetime`](struct.TlsConfig.html#method.set_session_lifetime)
-    pub fn session_lifetime<'a>(&'a mut self, lifetime: usize) -> &'a mut Self {
+    pub fn session_lifetime(&'_ mut self, lifetime: usize) -> &'_ mut Self {
         self.session_lifetime = Some(lifetime);
         self
     }
@@ -1591,7 +1597,7 @@ impl TlsConfigBuilder {
     /// # See also
     ///
     /// [`TlsConfig::add_ticket_key`](struct.TlsConfig.html#method.add_ticket_key)
-    pub fn ticket_key<'a>(&'a mut self, keyrev: u32, key: &[u8]) -> &'a mut Self {
+    pub fn ticket_key(&'_ mut self, keyrev: u32, key: &[u8]) -> &'_ mut Self {
         self.ticket_key.insert(keyrev, key.to_vec());
         self
     }
@@ -1601,7 +1607,7 @@ impl TlsConfigBuilder {
     /// # See also
     ///
     /// [`TlsConfig::verify`](struct.TlsConfig.html#method.verify)
-    pub fn verify<'a>(&'a mut self) -> &'a mut Self {
+    pub fn verify(&'_ mut self) -> &'_ mut Self {
         self.verify = true;
         self
     }
@@ -1611,7 +1617,7 @@ impl TlsConfigBuilder {
     /// # See also
     ///
     /// [`TlsConfig::verify_client`](struct.TlsConfig.html#method.verify_client)
-    pub fn verify_client<'a>(&'a mut self) -> &'a mut Self {
+    pub fn verify_client(&'_ mut self) -> &'_ mut Self {
         self.verify_client = true;
         self
     }
@@ -1621,7 +1627,7 @@ impl TlsConfigBuilder {
     /// # See also
     ///
     /// [`TlsConfig::verify_client_optional`](struct.TlsConfig.html#method.verify_client_optional)
-    pub fn verify_client_optional<'a>(&'a mut self) -> &'a mut Self {
+    pub fn verify_client_optional(&'_ mut self) -> &'_ mut Self {
         self.verify_client_optional = true;
         self
     }
@@ -1631,7 +1637,7 @@ impl TlsConfigBuilder {
     /// # See also
     ///
     /// [`TlsConfig::verify_depth`](struct.TlsConfig.html#method.verify_depth)
-    pub fn verify_depth<'a>(&'a mut self, depth: usize) -> &'a mut Self {
+    pub fn verify_depth(&'_ mut self, depth: usize) -> &'_ mut Self {
         self.verify_depth = Some(depth);
         self
     }

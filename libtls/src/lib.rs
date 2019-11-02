@@ -192,7 +192,7 @@ pub use libtls::{
 ///
 /// [`tls_init(3)`](https://man.openbsd.org/tls_init.3)
 #[deprecated(
-    since = "LibreSSL 2.7.0",
+    since = "2.7.0-LibreSSL",
     note = "It is no longer necessary to call this function."
 )]
 pub fn init() -> error::Result<()> {
@@ -212,9 +212,7 @@ mod test {
         let mut tls = if ca_path.exists() {
             TlsConfigBuilder::new().client()?
         } else {
-            TlsConfigBuilder::new()
-                .ca_path("/etc/ssl/certs")
-                .client()?
+            TlsConfigBuilder::new().ca_path("/etc/ssl/certs").client()?
         };
 
         tls.connect_servername(("1.1.1.1", 443), "cloudflare-dns.com")?;

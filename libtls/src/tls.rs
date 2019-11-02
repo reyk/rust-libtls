@@ -591,7 +591,7 @@ impl Tls {
             let mut size = 0;
             let ptr = libtls::tls_peer_cert_chain_pem(self.0, &mut size);
             if ptr.is_null() {
-                let errstr = self.last_error().unwrap_or("no error".to_string());
+                let errstr = self.last_error().unwrap_or_else(|_| "no error".to_string());
                 Self::to_error(errstr)
             } else {
                 let data = slice::from_raw_parts(ptr, size);
