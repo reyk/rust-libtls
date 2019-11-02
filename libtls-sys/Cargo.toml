@@ -1,6 +1,6 @@
 [package]
 name = "libtls-sys"
-version = "0.1.1-alpha"
+version = "1.0.0-alpha1"
 authors = ["Reyk Floeter <contact@reykfloeter.com>"]
 edition = "2018"
 license = "ISC"
