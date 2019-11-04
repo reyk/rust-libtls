@@ -85,6 +85,12 @@ impl From<num::TryFromIntError> for TlsError {
     }
 }
 
+impl From<TlsError> for io::Error {
+    fn from(err: TlsError) -> Self {
+        io::Error::new(io::ErrorKind::Other, err)
+    }
+}
+
 /// A result type that is returning a [TlsError](enum.TlsError.html).
 pub type Result<T> = std::result::Result<T, TlsError>;
 

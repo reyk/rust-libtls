@@ -19,7 +19,7 @@ use std::os::raw::{c_char, c_int};
 use std::path::Path;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use libtls::time_t;
+use libtls_sys::time_t;
 
 use super::config::TlsConfig;
 use super::error::{LastError, Result, TlsError};
@@ -29,7 +29,7 @@ use super::error::{LastError, Result, TlsError};
 pub fn call_file1<P: AsRef<Path>>(
     config: &mut TlsConfig,
     file1: (P, &str),
-    f: unsafe extern "C" fn(*mut libtls::tls_config, *const c_char) -> c_int,
+    f: unsafe extern "C" fn(*mut libtls_sys::tls_config, *const c_char) -> c_int,
 ) -> Result<()> {
     let s_file1 = cvt_option(
         file1.0.as_ref().to_str(),
@@ -45,7 +45,7 @@ pub fn call_file2<P: AsRef<Path>>(
     config: &mut TlsConfig,
     file1: (P, &str),
     file2: (P, &str),
-    f: unsafe extern "C" fn(*mut libtls::tls_config, *const c_char, *const c_char) -> c_int,
+    f: unsafe extern "C" fn(*mut libtls_sys::tls_config, *const c_char, *const c_char) -> c_int,
 ) -> Result<()> {
     let s_file1 = cvt_option(
         file1.0.as_ref().to_str(),
@@ -68,7 +68,7 @@ pub fn call_file3<P: AsRef<Path>>(
     file2: (P, &str),
     file3: (P, &str),
     f: unsafe extern "C" fn(
-        *mut libtls::tls_config,
+        *mut libtls_sys::tls_config,
         *const c_char,
         *const c_char,
         *const c_char,
@@ -105,7 +105,7 @@ pub fn call_file3<P: AsRef<Path>>(
 pub fn call_string1(
     config: &mut TlsConfig,
     string1: &str,
-    f: unsafe extern "C" fn(*mut libtls::tls_config, *const c_char) -> c_int,
+    f: unsafe extern "C" fn(*mut libtls_sys::tls_config, *const c_char) -> c_int,
 ) -> Result<()> {
     unsafe {
         let c_string1 = CString::new(string1)?;
@@ -116,7 +116,7 @@ pub fn call_string1(
 pub fn call_arg1<T>(
     config: &mut TlsConfig,
     arg1: T,
-    f: unsafe extern "C" fn(*mut libtls::tls_config, T) -> c_int,
+    f: unsafe extern "C" fn(*mut libtls_sys::tls_config, T) -> c_int,
 ) -> Result<()> {
     cvt(config, unsafe { f(config.0, arg1) })
 }
@@ -181,6 +181,12 @@ where
     }
 }
 
+/// Convert C string return to a Rust result and string.
+///
+/// # Safety
+///
+/// This internal function must be called from `unsafe` context because it calls
+/// C-to-Rust string conversions.
 pub unsafe fn cvt_string<E>(object: &mut E, retval: *const c_char) -> Result<String>
 where
     E: LastError,
@@ -197,17 +203,25 @@ where
     }
 }
 
-pub fn cvt_option<T>(option: Option<T>, error: io::Error) -> Result<T> {
-    match option {
-        None => Err(TlsError::IoError(error)),
-        Some(v) => Ok(v),
-    }
-}
-
+/// Like [`cvt_string`], but return an error code if the C string is NULL.
+///
+/// # Safety
+///
+/// This internal function must be called from `unsafe` context because it calls
+/// C-to-Rust string conversions.
+///
+/// [`cvt_string`]: fn.cvt_string.html
 pub unsafe fn cvt_no_error(error: *const c_char) -> Result<String> {
     if error.is_null() {
         Err(TlsError::NoError)
     } else {
         Ok(CStr::from_ptr(error).to_string_lossy().into_owned())
+    }
+}
+
+pub fn cvt_option<T>(option: Option<T>, error: io::Error) -> Result<T> {
+    match option {
+        None => Err(TlsError::IoError(error)),
+        Some(v) => Ok(v),
     }
 }

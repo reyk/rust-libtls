@@ -95,7 +95,8 @@ use super::util::*;
 /// [`set_protocols`]: #method.set_protocols
 /// [`tls_config_load_file`]: ../fn.tls_config_load_file.html
 /// [`verify`]: #method.verify
-pub struct TlsConfig(pub(crate) *mut libtls::tls_config);
+#[derive(Debug)]
+pub struct TlsConfig(pub(crate) *mut libtls_sys::tls_config);
 
 impl TlsConfig {
     /// Create a new configuration.
@@ -126,7 +127,7 @@ impl TlsConfig {
     /// [`Tls`]: ../tls/struct.Tls.html
     /// [`io::Error`]: https://doc.rust-lang.org/std/io/struct.Error.html
     pub fn new() -> io::Result<Self> {
-        let config = unsafe { libtls::tls_config_new() };
+        let config = unsafe { libtls_sys::tls_config_new() };
         if config.is_null() {
             Err(io::Error::last_os_error())
         } else {
@@ -165,7 +166,7 @@ impl TlsConfig {
             self,
             (cert_file, "cert file"),
             (key_file, "key file"),
-            libtls::tls_config_add_keypair_file,
+            libtls_sys::tls_config_add_keypair_file,
         )
     }
 
@@ -195,7 +196,7 @@ impl TlsConfig {
     /// [`tls_config_add_keypair_mem(3)`](https://man.openbsd.org/tls_config_add_keypair_mem.3)
     pub fn add_keypair_mem(&mut self, cert: &[u8], key: &[u8]) -> error::Result<()> {
         cvt(self, unsafe {
-            libtls::tls_config_add_keypair_mem(
+            libtls_sys::tls_config_add_keypair_mem(
                 self.0,
                 cert.as_ptr(),
                 cert.len(),
@@ -226,7 +227,7 @@ impl TlsConfig {
             (cert_file, "cert file"),
             (key_file, "key file"),
             (ocsp_staple_file, "ocsp staple file"),
-            libtls::tls_config_add_keypair_ocsp_file,
+            libtls_sys::tls_config_add_keypair_ocsp_file,
         )
     }
 
@@ -247,7 +248,7 @@ impl TlsConfig {
         ocsp_staple: &[u8],
     ) -> error::Result<()> {
         cvt(self, unsafe {
-            libtls::tls_config_add_keypair_ocsp_mem(
+            libtls_sys::tls_config_add_keypair_ocsp_mem(
                 self.0,
                 cert.as_ptr(),
                 cert.len(),
@@ -284,7 +285,7 @@ impl TlsConfig {
     ///
     /// [`tls_config_set_alpn(3)`](https://man.openbsd.org/tls_config_set_alpn.3)
     pub fn set_alpn(&mut self, alpn: &str) -> error::Result<()> {
-        call_string1(self, alpn, libtls::tls_config_set_alpn)
+        call_string1(self, alpn, libtls_sys::tls_config_set_alpn)
     }
 
     /// Set the CA file.
@@ -300,7 +301,11 @@ impl TlsConfig {
     ///
     /// [`default_ca_cert_file`]: fn.default_ca_cert_file.html
     pub fn set_ca_file<P: AsRef<Path>>(&mut self, ca_file: P) -> error::Result<()> {
-        call_file1(self, (ca_file, "ca file"), libtls::tls_config_set_ca_file)
+        call_file1(
+            self,
+            (ca_file, "ca file"),
+            libtls_sys::tls_config_set_ca_file,
+        )
     }
 
     /// Set the path that should be searched for the CA files.
@@ -313,7 +318,11 @@ impl TlsConfig {
     /// [`set_ca_file`](#method.set_ca_file.html),
     /// [`tls_config_set_ca_path(3)`](https://man.openbsd.org/tls_config_set_ca_path.3)
     pub fn set_ca_path<P: AsRef<Path>>(&mut self, ca_path: P) -> error::Result<()> {
-        call_file1(self, (ca_path, "ca path"), libtls::tls_config_set_ca_path)
+        call_file1(
+            self,
+            (ca_path, "ca path"),
+            libtls_sys::tls_config_set_ca_path,
+        )
     }
 
     /// Set the CA from memory.
@@ -327,7 +336,7 @@ impl TlsConfig {
     /// [`tls_config_set_ca_mem(3)`](https://man.openbsd.org/tls_config_set_ca_mem.3)
     pub fn set_ca_mem(&mut self, ca: &[u8]) -> error::Result<()> {
         cvt(self, unsafe {
-            libtls::tls_config_set_ca_mem(self.0, ca.as_ptr(), ca.len())
+            libtls_sys::tls_config_set_ca_mem(self.0, ca.as_ptr(), ca.len())
         })
     }
 
@@ -341,7 +350,7 @@ impl TlsConfig {
     /// [`tls_config_set_ca_mem(3)`](https://man.openbsd.org/tls_config_set_ca_mem.3)
     pub fn tls_config_set_ca_mem(&mut self, ca: &[u8]) -> error::Result<()> {
         cvt(self, unsafe {
-            libtls::tls_config_set_ca_mem(self.0, ca.as_ptr(), ca.len())
+            libtls_sys::tls_config_set_ca_mem(self.0, ca.as_ptr(), ca.len())
         })
     }
 
@@ -358,7 +367,7 @@ impl TlsConfig {
         call_file1(
             self,
             (cert_file, "cert file"),
-            libtls::tls_config_set_cert_file,
+            libtls_sys::tls_config_set_cert_file,
         )
     }
 
@@ -373,7 +382,7 @@ impl TlsConfig {
     /// [`tls_config_set_cert_mem(3)`](https://man.openbsd.org/tls_config_set_cert_mem.3)
     pub fn set_cert_mem(&mut self, cert: &[u8]) -> error::Result<()> {
         cvt(self, unsafe {
-            libtls::tls_config_set_cert_mem(self.0, cert.as_ptr(), cert.len())
+            libtls_sys::tls_config_set_cert_mem(self.0, cert.as_ptr(), cert.len())
         })
     }
 
@@ -412,7 +421,7 @@ impl TlsConfig {
     ///
     /// [`openssl(1)`]: http://man.openbsd.org/openssl.1#CIPHERS
     pub fn set_ciphers(&mut self, ciphers: &str) -> error::Result<()> {
-        call_string1(self, ciphers, libtls::tls_config_set_ciphers)
+        call_string1(self, ciphers, libtls_sys::tls_config_set_ciphers)
     }
 
     /// Set the CRL file.
@@ -428,7 +437,7 @@ impl TlsConfig {
         call_file1(
             self,
             (crl_file, "crl file"),
-            libtls::tls_config_set_crl_file,
+            libtls_sys::tls_config_set_crl_file,
         )
     }
 
@@ -443,7 +452,7 @@ impl TlsConfig {
     /// [`tls_config_set_crl_mem(3)`](https://man.openbsd.org/tls_config_set_crl_mem.3)
     pub fn set_crl_mem(&mut self, crl: &[u8]) -> error::Result<()> {
         cvt(self, unsafe {
-            libtls::tls_config_set_crl_mem(self.0, crl.as_ptr(), crl.len())
+            libtls_sys::tls_config_set_crl_mem(self.0, crl.as_ptr(), crl.len())
         })
     }
 
@@ -473,7 +482,7 @@ impl TlsConfig {
     ///
     /// [`tls_config_set_dheparams(3)`](https://man.openbsd.org/tls_config_set_dheparams.3)
     pub fn set_dheparams(&mut self, dheparams: &str) -> error::Result<()> {
-        call_string1(self, dheparams, libtls::tls_config_set_dheparams)
+        call_string1(self, dheparams, libtls_sys::tls_config_set_dheparams)
     }
 
     /// The `set_ecdhecurve` method was replaced by [set_ecdhecurves](#method.set_ecdhecurves).
@@ -482,7 +491,7 @@ impl TlsConfig {
         note = "Replaced by [set_ecdhecurves](#method.set_ecdhecurves)."
     )]
     pub fn set_ecdhecurve(&mut self, ecdhecurve: &str) -> error::Result<()> {
-        call_string1(self, ecdhecurve, libtls::tls_config_set_ecdhecurve)
+        call_string1(self, ecdhecurve, libtls_sys::tls_config_set_ecdhecurve)
     }
 
     /// Set the curves of an Elliptic Curve Diffie-Hellman Ephemeral (ECDHE) key exchange.
@@ -513,7 +522,7 @@ impl TlsConfig {
     ///
     /// [`set_ecdhecurve`]: #method.set_ecdhecurve
     pub fn set_ecdhecurves(&mut self, ecdhecurves: &str) -> error::Result<()> {
-        call_string1(self, ecdhecurves, libtls::tls_config_set_ecdhecurves)
+        call_string1(self, ecdhecurves, libtls_sys::tls_config_set_ecdhecurves)
     }
 
     /// Set the private key file.
@@ -529,7 +538,7 @@ impl TlsConfig {
         call_file1(
             self,
             (key_file, "key file"),
-            libtls::tls_config_set_key_file,
+            libtls_sys::tls_config_set_key_file,
         )
     }
 
@@ -543,7 +552,7 @@ impl TlsConfig {
     /// [`tls_config_set_key_mem(3)`](https://man.openbsd.org/tls_config_set_key_mem.3)
     pub fn set_key_mem(&mut self, key: &[u8]) -> error::Result<()> {
         cvt(self, unsafe {
-            libtls::tls_config_set_key_mem(self.0, key.as_ptr(), key.len())
+            libtls_sys::tls_config_set_key_mem(self.0, key.as_ptr(), key.len())
         })
     }
 
@@ -565,7 +574,7 @@ impl TlsConfig {
             self,
             (cert_file, "cert file"),
             (key_file, "key file"),
-            libtls::tls_config_set_keypair_file,
+            libtls_sys::tls_config_set_keypair_file,
         )
     }
 
@@ -580,7 +589,7 @@ impl TlsConfig {
     /// [`tls_config_set_keypair_mem(3)`](https://man.openbsd.org/tls_config_set_keypair_mem.3)
     pub fn set_keypair_mem(&mut self, cert: &[u8], key: &[u8]) -> error::Result<()> {
         cvt(self, unsafe {
-            libtls::tls_config_set_keypair_mem(
+            libtls_sys::tls_config_set_keypair_mem(
                 self.0,
                 cert.as_ptr(),
                 cert.len(),
@@ -610,7 +619,7 @@ impl TlsConfig {
             (cert_file, "cert file"),
             (key_file, "key file"),
             (ocsp_staple_file, "ocsp staple file"),
-            libtls::tls_config_set_keypair_ocsp_file,
+            libtls_sys::tls_config_set_keypair_ocsp_file,
         )
     }
 
@@ -630,7 +639,7 @@ impl TlsConfig {
         ocsp_staple: &[u8],
     ) -> error::Result<()> {
         cvt(self, unsafe {
-            libtls::tls_config_set_keypair_ocsp_mem(
+            libtls_sys::tls_config_set_keypair_ocsp_mem(
                 self.0,
                 cert.as_ptr(),
                 cert.len(),
@@ -653,7 +662,11 @@ impl TlsConfig {
     /// [`tls_config_set_ocsp_staple_mem(3)`](https://man.openbsd.org/tls_config_set_ocsp_staple_mem.3)
     pub fn set_ocsp_staple_mem(&mut self, ocsp_staple: &[u8]) -> error::Result<()> {
         cvt(self, unsafe {
-            libtls::tls_config_set_ocsp_staple_mem(self.0, ocsp_staple.as_ptr(), ocsp_staple.len())
+            libtls_sys::tls_config_set_ocsp_staple_mem(
+                self.0,
+                ocsp_staple.as_ptr(),
+                ocsp_staple.len(),
+            )
         })
     }
 
@@ -674,7 +687,7 @@ impl TlsConfig {
         call_file1(
             self,
             (ocsp_staple_file, "ocsp staple file"),
-            libtls::tls_config_set_ocsp_staple_file,
+            libtls_sys::tls_config_set_ocsp_staple_file,
         )
     }
 
@@ -717,7 +730,7 @@ impl TlsConfig {
     /// [`TLS_PROTOCOL_TLSv1_1`]: ../constant.TLS_PROTOCOL_TLSv1_1.html
     /// [`TLS_PROTOCOL_TLSv1_2`]: ../constant.TLS_PROTOCOL_TLSv1_2.html
     pub fn set_protocols(&mut self, protocols: u32) -> error::Result<()> {
-        call_arg1(self, protocols, libtls::tls_config_set_protocols)
+        call_arg1(self, protocols, libtls_sys::tls_config_set_protocols)
     }
 
     /// Set a file descriptor to manage data for TLS sessions.
@@ -740,7 +753,7 @@ impl TlsConfig {
     /// [`Tls`]: ../tls/struct.Tls.html
     /// [dropped]: ../tls/struct.Tls.html#impl-Drop
     pub fn set_session_fd(&mut self, session_fd: RawFd) -> error::Result<()> {
-        call_arg1(self, session_fd, libtls::tls_config_set_session_fd)
+        call_arg1(self, session_fd, libtls_sys::tls_config_set_session_fd)
     }
 
     /// Set the certificate verification depth.
@@ -755,7 +768,7 @@ impl TlsConfig {
         call_arg1(
             self,
             verify_depth as i32,
-            libtls::tls_config_set_verify_depth,
+            libtls_sys::tls_config_set_verify_depth,
         )
     }
 
@@ -769,7 +782,7 @@ impl TlsConfig {
     ///
     /// [`tls_config_prefer_ciphers_client(3)`](https://man.openbsd.org/tls_config_prefer_ciphers_client.3)
     pub fn prefer_ciphers_client(&mut self) {
-        unsafe { libtls::tls_config_prefer_ciphers_client(self.0) }
+        unsafe { libtls_sys::tls_config_prefer_ciphers_client(self.0) }
     }
 
     /// Prefer ciphers in the servers's cipher list.
@@ -782,7 +795,7 @@ impl TlsConfig {
     ///
     /// [`tls_config_prefer_ciphers_server(3)`](https://man.openbsd.org/tls_config_prefer_ciphers_server.3)
     pub fn prefer_ciphers_server(&mut self) {
-        unsafe { libtls::tls_config_prefer_ciphers_server(self.0) }
+        unsafe { libtls_sys::tls_config_prefer_ciphers_server(self.0) }
     }
 
     /// Disable certificate verification.
@@ -794,7 +807,7 @@ impl TlsConfig {
     ///
     /// [`tls_config_insecure_noverifycert(3)`](https://man.openbsd.org/tls_config_insecure_noverifycert.3)
     pub fn insecure_noverifycert(&mut self) {
-        unsafe { libtls::tls_config_insecure_noverifycert(self.0) }
+        unsafe { libtls_sys::tls_config_insecure_noverifycert(self.0) }
     }
 
     /// Disable server name verification.
@@ -806,7 +819,7 @@ impl TlsConfig {
     ///
     /// [`tls_config_insecure_noverifyname(3)`](https://man.openbsd.org/tls_config_insecure_noverifyname.3)
     pub fn insecure_noverifyname(&mut self) {
-        unsafe { libtls::tls_config_insecure_noverifyname(self.0) }
+        unsafe { libtls_sys::tls_config_insecure_noverifyname(self.0) }
     }
 
     /// Disable certificate validity checking.
@@ -818,7 +831,7 @@ impl TlsConfig {
     ///
     /// [`tls_config_insecure_noverifytime(3)`](https://man.openbsd.org/tls_config_insecure_noverifytime.3)
     pub fn insecure_noverifytime(&mut self) {
-        unsafe { libtls::tls_config_insecure_noverifytime(self.0) }
+        unsafe { libtls_sys::tls_config_insecure_noverifytime(self.0) }
     }
 
     /// Enable all certificate verification.
@@ -830,7 +843,7 @@ impl TlsConfig {
     /// [`tls_config_verify(3)`](https://man.openbsd.org/tls_config_verify.3)
     pub fn verify(&mut self) {
         // reenables OCSP validation as well?
-        unsafe { libtls::tls_config_verify(self.0) }
+        unsafe { libtls_sys::tls_config_verify(self.0) }
     }
 
     /// Require OCSP stapling.
@@ -842,7 +855,7 @@ impl TlsConfig {
     ///
     /// [`tls_config_ocsp_require_stapling(3)`](https://man.openbsd.org/tls_config_ocsp_require_stapling.3)
     pub fn ocsp_require_stapling(&mut self) {
-        unsafe { libtls::tls_config_ocsp_require_stapling(self.0) }
+        unsafe { libtls_sys::tls_config_ocsp_require_stapling(self.0) }
     }
 
     /// Enable client certificate verification.
@@ -854,7 +867,7 @@ impl TlsConfig {
     ///
     /// [`tls_config_verify_client(3)`](https://man.openbsd.org/tls_config_verify_client.3)
     pub fn verify_client(&mut self) {
-        unsafe { libtls::tls_config_verify_client(self.0) }
+        unsafe { libtls_sys::tls_config_verify_client(self.0) }
     }
 
     /// Enable optional client certificate verification.
@@ -867,7 +880,7 @@ impl TlsConfig {
     ///
     /// [`tls_config_verify_client_optional(3)`](https://man.openbsd.org/tls_config_verify_client_optional.3)
     pub fn verify_client_optional(&mut self) {
-        unsafe { libtls::tls_config_verify_client_optional(self.0) }
+        unsafe { libtls_sys::tls_config_verify_client_optional(self.0) }
     }
 
     /// Securely clear secret keys.
@@ -878,7 +891,7 @@ impl TlsConfig {
     ///
     /// [`tls_config_clear_keys(3)`](https://man.openbsd.org/tls_config_clear_keys.3)
     pub fn clear_keys(&mut self) {
-        unsafe { libtls::tls_config_clear_keys(self.0) }
+        unsafe { libtls_sys::tls_config_clear_keys(self.0) }
     }
 
     /// Set the session identifier for TLS sessions.
@@ -910,7 +923,7 @@ impl TlsConfig {
     /// [`tls_config_set_session_id(3)`](https://man.openbsd.org/tls_config_set_session_id.3)
     pub fn set_session_id(&mut self, session_id: &[u8]) -> error::Result<()> {
         cvt(self, unsafe {
-            libtls::tls_config_set_session_id(self.0, session_id.as_ptr(), session_id.len())
+            libtls_sys::tls_config_set_session_id(self.0, session_id.as_ptr(), session_id.len())
         })
     }
 
@@ -927,7 +940,7 @@ impl TlsConfig {
         call_arg1(
             self,
             lifetime as i32,
-            libtls::tls_config_set_session_lifetime,
+            libtls_sys::tls_config_set_session_lifetime,
         )
     }
 
@@ -964,7 +977,7 @@ impl TlsConfig {
     pub fn add_ticket_key(&mut self, keyrev: u32, key: &mut [u8]) -> error::Result<()> {
         // XXX key should be const, consider changing this in the upstream API
         cvt(self, unsafe {
-            libtls::tls_config_add_ticket_key(self.0, keyrev, key.as_mut_ptr(), key.len())
+            libtls_sys::tls_config_add_ticket_key(self.0, keyrev, key.as_mut_ptr(), key.len())
         })
     }
 }
@@ -980,7 +993,7 @@ impl error::LastError for TlsConfig {
     ///
     /// [`tls_config_error(3)`](https://man.openbsd.org/tls_config_error.3)
     fn last_error(&self) -> error::Result<String> {
-        unsafe { cvt_no_error(libtls::tls_config_error(self.0)) }
+        unsafe { cvt_no_error(libtls_sys::tls_config_error(self.0)) }
     }
 
     fn to_error<T>(errstr: String) -> error::Result<T> {
@@ -988,8 +1001,8 @@ impl error::LastError for TlsConfig {
     }
 }
 
-impl From<*mut libtls::tls_config> for TlsConfig {
-    fn from(config: *mut libtls::tls_config) -> Self {
+impl From<*mut libtls_sys::tls_config> for TlsConfig {
+    fn from(config: *mut libtls_sys::tls_config) -> Self {
         if config.is_null() {
             panic!(io::Error::last_os_error())
         }
@@ -1007,7 +1020,7 @@ impl Drop for TlsConfig {
     ///
     /// [`Tls`]: ../tls/struct.Tls.html
     fn drop(&mut self) {
-        unsafe { libtls::tls_config_free(self.0) };
+        unsafe { libtls_sys::tls_config_free(self.0) };
     }
 }
 
@@ -1031,7 +1044,7 @@ unsafe impl Sync for TlsConfig {}
 ///
 /// [`tls_default_ca_cert_file(3)`](https://man.openbsd.org/tls_default_ca_cert_file.3)
 pub fn default_ca_cert_file() -> PathBuf {
-    unsafe { CStr::from_ptr(libtls::tls_default_ca_cert_file()) }
+    unsafe { CStr::from_ptr(libtls_sys::tls_default_ca_cert_file()) }
         .to_string_lossy()
         .into_owned()
         .into()
@@ -1077,7 +1090,8 @@ pub fn parse_protocols(protostr: &str) -> error::Result<u32> {
     let c_protostr = CString::new(protostr)?;
     let mut protocols: u32 = 0;
 
-    let retval = unsafe { libtls::tls_config_parse_protocols(&mut protocols, c_protostr.as_ptr()) };
+    let retval =
+        unsafe { libtls_sys::tls_config_parse_protocols(&mut protocols, c_protostr.as_ptr()) };
     if retval == -1 {
         Err(io::Error::new(io::ErrorKind::Other, "Invalid protocols string").into())
     } else {
@@ -1129,14 +1143,14 @@ pub fn load_file<P: AsRef<Path>>(file: P, password: Option<&str>) -> error::Resu
                 let c_password = CString::new(password)?;
 
                 let raw = c_password.into_raw();
-                let data = libtls::tls_load_file(c_file.as_ptr(), &mut size, raw);
+                let data = libtls_sys::tls_load_file(c_file.as_ptr(), &mut size, raw);
 
                 // Make sure that the raw pointer is not leaked
                 let _ = CString::from_raw(raw);
 
                 data
             }
-            None => libtls::tls_load_file(c_file.as_ptr(), &mut size, std::ptr::null_mut()),
+            None => libtls_sys::tls_load_file(c_file.as_ptr(), &mut size, std::ptr::null_mut()),
         };
         if data.is_null() {
             Err(io::Error::last_os_error().into())
@@ -1160,7 +1174,7 @@ pub fn unload_file(mut data: Vec<u8>) {
     let ptr = data.as_mut_ptr();
     let len = data.len();
     std::mem::forget(data);
-    unsafe { libtls::tls_unload_file(ptr, len) }
+    unsafe { libtls_sys::tls_unload_file(ptr, len) }
 }
 
 #[derive(Debug)]

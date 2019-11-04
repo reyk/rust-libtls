@@ -99,7 +99,7 @@
 )]
 #![warn(missing_docs)]
 
-extern crate libtls_sys as libtls;
+extern crate libtls_sys;
 
 ///
 /// TLS configuration for connections.
@@ -118,13 +118,13 @@ pub mod tls;
 mod util;
 
 /// TLS API version.
-pub use libtls::TLS_API;
+pub use libtls_sys::TLS_API;
 
 use util::*;
 
 /// TLS major/minor protocol version.
 #[rustfmt::skip]
-pub use libtls::{
+pub use libtls_sys::{
     TLS_PROTOCOL_TLSv1_0,
     TLS_PROTOCOL_TLSv1_1,
     TLS_PROTOCOL_TLSv1_2,
@@ -135,14 +135,14 @@ pub use libtls::{
 
 /// TLS async I/O.
 #[rustfmt::skip]
-pub use libtls::{
+pub use libtls_sys::{
     TLS_WANT_POLLIN,
     TLS_WANT_POLLOUT
 };
 
 /// OCSP response (RFC 6960 Section 2.3).
 #[rustfmt::skip]
-pub use libtls::{
+pub use libtls_sys::{
     TLS_OCSP_RESPONSE_SUCCESSFUL,
     TLS_OCSP_RESPONSE_MALFORMED,
     TLS_OCSP_RESPONSE_INTERNALERROR,
@@ -153,7 +153,7 @@ pub use libtls::{
 
 /// OCSP certificate (RFC 6960 Section 2.2).
 #[rustfmt::skip]
-pub use libtls::{
+pub use libtls_sys::{
     TLS_OCSP_CERT_GOOD,
     TLS_OCSP_CERT_REVOKED,
     TLS_OCSP_CERT_UNKNOWN
@@ -161,7 +161,7 @@ pub use libtls::{
 
 /// CRL (RFC 5280 Section 5.3.1).
 #[rustfmt::skip]
-pub use libtls::{
+pub use libtls_sys::{
     TLS_CRL_REASON_UNSPECIFIED,
     TLS_CRL_REASON_KEY_COMPROMISE,
     TLS_CRL_REASON_CA_COMPROMISE,
@@ -176,7 +176,7 @@ pub use libtls::{
 
 /// TLS session.
 #[rustfmt::skip]
-pub use libtls::{
+pub use libtls_sys::{
     TLS_MAX_SESSION_ID_LENGTH,
     TLS_TICKET_KEY_SIZE
 };
@@ -196,7 +196,7 @@ pub use libtls::{
     note = "It is no longer necessary to call this function."
 )]
 pub fn init() -> error::Result<()> {
-    cvt_io((), unsafe { libtls::tls_init() })
+    cvt_io((), unsafe { libtls_sys::tls_init() })
 }
 
 #[cfg(test)]
