@@ -7,7 +7,7 @@ license = "ISC"
 readme = "README.md"
 description = "Tokio bindings for LibreSSL's libtls."
 repository = "https://github.com/reyk/rust-libtls"
-categories = ["asynchronous", "cryptography", "network programming"]
+categories = ["asynchronous", "cryptography", "network-programming"]
 keywords = ["tokio", "tls", "ssl", "libressl", "openbsd"]
 documentation = "https://reyk.github.io/rust-libtls/libtls/"
 
