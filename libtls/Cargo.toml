@@ -1,6 +1,6 @@
 [package]
 name = "libtls"
-version = "1.0.0-alpha7"
+version = "1.0.0-alpha8"
 authors = ["Reyk Floeter <contact@reykfloeter.com>"]
 edition = "2018"
 license = "ISC"
@@ -15,7 +15,7 @@ documentation = "https://reyk.github.io/rust-libtls/libtls/"
 travis-ci = { repository = "reyk/rust-libtls", branch = "master" }
 
 [dependencies]
-libtls-sys = { path = "../libtls-sys", version = "1.0.0-alpha7" }
+libtls-sys = { path = "../libtls-sys", version = "1.0.0-alpha8" }
 
 [dev-dependencies]
 rand = "0.7.2"
