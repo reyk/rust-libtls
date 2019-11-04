@@ -176,7 +176,7 @@ impl Evented for TlsStream {
     ) -> io::Result<()> {
         let res = EventedFd(&self.as_raw_fd()).register(poll, token, interest, opts);
         match res {
-            Err(err) if err.kind() == io::ErrorKind::AlreadyExists => {
+            Err(ref err) if err.kind() == io::ErrorKind::AlreadyExists => {
                 self.reregister(poll, token, interest, opts)
             }
             Err(err) => Err(err),
