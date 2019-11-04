@@ -205,19 +205,12 @@ mod test {
     use super::*;
     use std::io::{Read, Write};
 
-    fn cloudflare_sync_client() -> error::Result<()> {
+    fn sync_https_connect() -> error::Result<()> {
         let mut buf = [0u8; 32];
-        let ca_path = default_ca_cert_file();
 
-        // XXX workaround for hardcoded CA file
-        let mut tls = if ca_path.exists() {
-            TlsConfigBuilder::new().client()?
-        } else {
-            TlsConfigBuilder::new().ca_path("/etc/ssl/certs").client()?
-        };
-
-        tls.connect_servername(("1.1.1.1", 443), "cloudflare-dns.com")?;
-        tls.write(b"GET / HTTP/1.1\r\nHost: cloudflare-dns.com\r\n\r\n")?;
+        let mut tls = TlsConfigBuilder::new().client()?;
+        tls.connect("www.example.com:443", None)?;
+        tls.write(b"GET / HTTP/1.1\r\nHost: www.example.com\r\n\r\n")?;
         tls.read(&mut buf)?;
 
         let ok = b"HTTP/1.1 200 OK\r\n";
@@ -227,7 +220,7 @@ mod test {
     }
 
     #[test]
-    fn test_cloudflare_sync_client() {
-        cloudflare_sync_client().unwrap();
+    fn test_sync_https_connect() {
+        sync_https_connect().unwrap();
     }
 }
