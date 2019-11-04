@@ -95,14 +95,10 @@ An non-blocking and asynchronous TLS connection using [Tokio] and the
 [tokio-libtls] crate:
 
 ```rust
-use futures::Future;
-use libtls::config::TlsConfigBuilder;
-use libtls::error;
 use std::net::ToSocketAddrs;
 use tokio::runtime::Runtime;
-use tokio_io::io::{read_exact, write_all};
-use tokio_libtls::AsyncTls;
-use tokio_tcp::TcpStream;
+use tokio::io::{read_exact, write_all};
+use tokio_libtls::prelude::*;
 
 fn async_https_connect(servername: String) -> error::Result<()> {
     let addr = &(servername.to_owned() + ":443")
