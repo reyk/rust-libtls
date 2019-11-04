@@ -947,6 +947,18 @@
 <span id="947">947</span>
 <span id="948">948</span>
 <span id="949">949</span>
+<span id="950">950</span>
+<span id="951">951</span>
+<span id="952">952</span>
+<span id="953">953</span>
+<span id="954">954</span>
+<span id="955">955</span>
+<span id="956">956</span>
+<span id="957">957</span>
+<span id="958">958</span>
+<span id="959">959</span>
+<span id="960">960</span>
+<span id="961">961</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) 2019 Reyk Floeter &lt;contact@reykfloeter.com&gt;</span>
 <span class="comment">//</span>
@@ -996,7 +1008,7 @@
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">net</span>::<span class="ident">ToSocketAddrs</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">os</span>::<span class="ident">raw</span>::<span class="ident">c_void</span>;
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">os</span>::<span class="ident">unix</span>::<span class="ident">io</span>::{<span class="ident">IntoRawFd</span>, <span class="ident">RawFd</span>};
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">os</span>::<span class="ident">unix</span>::<span class="ident">io</span>::{<span class="ident">AsRawFd</span>, <span class="ident">RawFd</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">slice</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">time</span>::<span class="ident">SystemTime</span>;
 
@@ -1032,15 +1044,16 @@
 <span class="doccomment">/// [`close`]: struct.Tls.html#method.close</span>
 <span class="doccomment">/// [`reset`]: struct.Tls.html#method.reset</span>
 <span class="doccomment">/// [dropped]: struct.Tls.html#impl-Drop</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Tls</span>(<span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">libtls</span>::<span class="ident">tls</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">RawFd</span><span class="op">&gt;</span>);
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Tls</span>(<span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">libtls_sys</span>::<span class="ident">tls</span>, <span class="ident">RawFd</span>);
 
 <span class="kw">impl</span> <span class="ident">Tls</span> {
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">f</span>: <span class="kw">unsafe</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">libtls</span>::<span class="ident">tls</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">f</span>: <span class="kw">unsafe</span> <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> <span class="kw">fn</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">libtls_sys</span>::<span class="ident">tls</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">tls</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">f</span>() };
         <span class="kw">if</span> <span class="ident">tls</span>.<span class="ident">is_null</span>() {
             <span class="prelude-val">Err</span>(<span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">last_os_error</span>())
         } <span class="kw">else</span> {
-            <span class="prelude-val">Ok</span>(<span class="ident">Tls</span>(<span class="ident">tls</span>, <span class="prelude-val">None</span>))
+            <span class="prelude-val">Ok</span>(<span class="ident">Tls</span>(<span class="ident">tls</span>, <span class="op">-</span><span class="number">1</span>))
         }
     }
 
@@ -1052,7 +1065,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// [`tls_client(3)`](https://man.openbsd.org/tls_client.3)</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">client</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="self">Self</span>::<span class="ident">new</span>(<span class="ident">libtls</span>::<span class="ident">tls_client</span>)
+        <span class="self">Self</span>::<span class="ident">new</span>(<span class="ident">libtls_sys</span>::<span class="ident">tls_client</span>)
     }
 
     <span class="doccomment">/// Create a new TLS server.</span>
@@ -1063,7 +1076,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// [`tls_server(3)`](https://man.openbsd.org/tls_server.3)</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">server</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="self">Self</span>::<span class="ident">new</span>(<span class="ident">libtls</span>::<span class="ident">tls_server</span>)
+        <span class="self">Self</span>::<span class="ident">new</span>(<span class="ident">libtls_sys</span>::<span class="ident">tls_server</span>)
     }
 
     <span class="doccomment">/// Configure the TLS context.</span>
@@ -1078,7 +1091,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// [`TlsConfig`]: ../config/struct.TlsConfig.html</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">configure</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">TlsConfig</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="ident">cvt</span>(<span class="self">self</span>, <span class="kw">unsafe</span> { <span class="ident">libtls</span>::<span class="ident">tls_configure</span>(<span class="self">self</span>.<span class="number">0</span>, <span class="ident">config</span>.<span class="number">0</span>) })
+        <span class="ident">cvt</span>(<span class="self">self</span>, <span class="kw">unsafe</span> { <span class="ident">libtls_sys</span>::<span class="ident">tls_configure</span>(<span class="self">self</span>.<span class="number">0</span>, <span class="ident">config</span>.<span class="number">0</span>) })
     }
 
     <span class="doccomment">/// Reset the TLS connection.</span>
@@ -1089,7 +1102,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// [`tls_reset(3)`](https://man.openbsd.org/tls_reset.3)</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">reset</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
-        <span class="kw">unsafe</span> { <span class="ident">libtls</span>::<span class="ident">tls_reset</span>(<span class="self">self</span>.<span class="number">0</span>) };
+        <span class="kw">unsafe</span> { <span class="ident">libtls_sys</span>::<span class="ident">tls_reset</span>(<span class="self">self</span>.<span class="number">0</span>) };
     }
 
     <span class="doccomment">/// Accept a new TLS connection on a pair of existing file descriptors.</span>
@@ -1103,10 +1116,10 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">accept_fds</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">fd_read</span>: <span class="ident">RawFd</span>, <span class="ident">fd_write</span>: <span class="ident">RawFd</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Tls</span><span class="op">&gt;</span> {
         <span class="kw">unsafe</span> {
             <span class="comment">// XXX Make sure that this pointer handling is correct!</span>
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cctx</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">libtls</span>::<span class="ident">tls</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">ptr</span>::<span class="ident">null_mut</span>();
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cctx</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">libtls_sys</span>::<span class="ident">tls</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">ptr</span>::<span class="ident">null_mut</span>();
             <span class="ident">cvt</span>(
                 <span class="self">self</span>,
-                <span class="ident">libtls</span>::<span class="ident">tls_accept_fds</span>(<span class="self">self</span>.<span class="number">0</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cctx</span>, <span class="ident">fd_read</span>, <span class="ident">fd_write</span>),
+                <span class="ident">libtls_sys</span>::<span class="ident">tls_accept_fds</span>(<span class="self">self</span>.<span class="number">0</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cctx</span>, <span class="ident">fd_read</span>, <span class="ident">fd_write</span>),
             )<span class="question-mark">?</span>;
             <span class="prelude-val">Ok</span>(<span class="ident">cctx</span>.<span class="ident">into</span>())
         }
@@ -1117,6 +1130,7 @@
     <span class="doccomment">/// The `accept_socket` method can accept a new client</span>
     <span class="doccomment">/// connection on an already established</span>
     <span class="doccomment">/// socket connection.</span>
+    <span class="doccomment">/// The socket `RawFd` is not closed after dropping the object.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// # See also</span>
     <span class="doccomment">///</span>
@@ -1125,16 +1139,20 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">accept_socket</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">socket</span>: <span class="ident">RawFd</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Tls</span><span class="op">&gt;</span> {
         <span class="kw">unsafe</span> {
             <span class="comment">// XXX Make sure that this pointer handling is correct!</span>
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cctx</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">libtls</span>::<span class="ident">tls</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">ptr</span>::<span class="ident">null_mut</span>();
-            <span class="ident">cvt</span>(<span class="self">self</span>, <span class="ident">libtls</span>::<span class="ident">tls_accept_socket</span>(<span class="self">self</span>.<span class="number">0</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cctx</span>, <span class="ident">socket</span>))<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cctx</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">libtls_sys</span>::<span class="ident">tls</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">ptr</span>::<span class="ident">null_mut</span>();
+            <span class="ident">cvt</span>(
+                <span class="self">self</span>,
+                <span class="ident">libtls_sys</span>::<span class="ident">tls_accept_socket</span>(<span class="self">self</span>.<span class="number">0</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cctx</span>, <span class="ident">socket</span>),
+            )<span class="question-mark">?</span>;
+            <span class="self">self</span>.<span class="number">1</span> <span class="op">=</span> <span class="ident">socket</span>;
             <span class="prelude-val">Ok</span>(<span class="ident">cctx</span>.<span class="ident">into</span>())
         }
     }
 
     <span class="doccomment">/// Accept a new TLS connection on an established connection.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// The `accept_io` method can accept a new client connection on an</span>
-    <span class="doccomment">/// already established connection that implements the [`IntoRawFd`] trait,</span>
+    <span class="doccomment">/// The `accept_raw_fd` method can accept a new client connection on an</span>
+    <span class="doccomment">/// already established connection that implements the [`AsRawFd`] trait,</span>
     <span class="doccomment">/// e.g. [`TcpStream`].</span>
     <span class="doccomment">/// It is a wrapper function on top of [`accept_socket`].</span>
     <span class="doccomment">///</span>
@@ -1144,14 +1162,12 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// [`accept_socket`]: #method.accept_socket</span>
     <span class="doccomment">/// [`TcpStream`]: https://doc.rust-lang.org/std/net/TcpStream.html</span>
-    <span class="doccomment">/// [`IntoRawFd`]: https://doc.rust-lang.org/std/os/unix/io/IntoRawFd.html</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">accept_io</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">raw_fd</span>: <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Tls</span><span class="op">&gt;</span>
+    <span class="doccomment">/// [`AsRawFd`]: https://doc.rust-lang.org/std/os/unix/io/AsRawFd.html</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">accept_raw_fd</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">raw_fd</span>: <span class="kw-2">&amp;</span><span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Tls</span><span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">T</span>: <span class="ident">IntoRawFd</span>,
+        <span class="ident">T</span>: <span class="ident">AsRawFd</span>,
     {
-        <span class="comment">// Store fd to close it automatically when dropping the object</span>
-        <span class="self">self</span>.<span class="number">1</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">raw_fd</span>.<span class="ident">into_raw_fd</span>());
-        <span class="self">self</span>.<span class="ident">accept_socket</span>(<span class="self">self</span>.<span class="number">1</span>.<span class="ident">unwrap</span>())
+        <span class="self">self</span>.<span class="ident">accept_socket</span>(<span class="ident">raw_fd</span>.<span class="ident">as_raw_fd</span>())
     }
 
     <span class="doccomment">/// Accept a new TLS connection with custom I/O callbacks.</span>
@@ -1170,11 +1186,11 @@
         <span class="ident">cb_arg</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">c_void</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Tls</span><span class="op">&gt;</span> {
         <span class="comment">// XXX Make sure that this pointer handling is correct!</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cctx</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">libtls</span>::<span class="ident">tls</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">ptr</span>::<span class="ident">null_mut</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cctx</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">libtls_sys</span>::<span class="ident">tls</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">ptr</span>::<span class="ident">null_mut</span>();
         <span class="kw">let</span> <span class="ident">cb_arg</span> <span class="op">=</span> <span class="ident">cb_arg</span>.<span class="ident">unwrap_or</span>(<span class="ident">std</span>::<span class="ident">ptr</span>::<span class="ident">null_mut</span>());
         <span class="ident">cvt</span>(
             <span class="self">self</span>,
-            <span class="ident">libtls</span>::<span class="ident">tls_accept_cbs</span>(<span class="self">self</span>.<span class="number">0</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cctx</span>, <span class="ident">read_cb</span>, <span class="ident">write_cb</span>, <span class="ident">cb_arg</span>),
+            <span class="ident">libtls_sys</span>::<span class="ident">tls_accept_cbs</span>(<span class="self">self</span>.<span class="number">0</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cctx</span>, <span class="ident">read_cb</span>, <span class="ident">write_cb</span>, <span class="ident">cb_arg</span>),
         )<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="ident">cctx</span>.<span class="ident">into</span>())
     }
@@ -1197,14 +1213,14 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">connect</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">host</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">port</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">unsafe</span> {
             <span class="kw">let</span> <span class="ident">c_host</span> <span class="op">=</span> <span class="ident">CString</span>::<span class="ident">new</span>(<span class="ident">host</span>)<span class="question-mark">?</span>;
-            <span class="kw">let</span> <span class="ident">c_port</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">port</span> {
-                <span class="prelude-val">Some</span>(<span class="ident">port</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="kw">let</span> <span class="ident">c_port</span> <span class="op">=</span> <span class="ident">CString</span>::<span class="ident">new</span>(<span class="ident">port</span>)<span class="question-mark">?</span>;
-                    <span class="ident">c_port</span>.<span class="ident">as_ptr</span>()
+            <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">port</span> {
+                <span class="prelude-val">Some</span>(<span class="ident">val</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="kw">let</span> <span class="ident">c_port</span> <span class="op">=</span> <span class="ident">CString</span>::<span class="ident">new</span>(<span class="ident">val</span>)<span class="question-mark">?</span>;
+                    <span class="ident">libtls_sys</span>::<span class="ident">tls_connect</span>(<span class="self">self</span>.<span class="number">0</span>, <span class="ident">c_host</span>.<span class="ident">as_ptr</span>(), <span class="ident">c_port</span>.<span class="ident">as_ptr</span>())
                 }
-                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">std</span>::<span class="ident">ptr</span>::<span class="ident">null</span>(),
+                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">libtls_sys</span>::<span class="ident">tls_connect</span>(<span class="self">self</span>.<span class="number">0</span>, <span class="ident">c_host</span>.<span class="ident">as_ptr</span>(), <span class="ident">std</span>::<span class="ident">ptr</span>::<span class="ident">null</span>()),
             };
-            <span class="ident">cvt</span>(<span class="self">self</span>, <span class="ident">libtls</span>::<span class="ident">tls_connect</span>(<span class="self">self</span>.<span class="number">0</span>, <span class="ident">c_host</span>.<span class="ident">as_ptr</span>(), <span class="ident">c_port</span>))
+            <span class="ident">cvt</span>(<span class="self">self</span>, <span class="ident">res</span>)
         }
     }
 
@@ -1225,7 +1241,7 @@
             <span class="kw">let</span> <span class="ident">c_servername</span> <span class="op">=</span> <span class="ident">CString</span>::<span class="ident">new</span>(<span class="ident">servername</span>)<span class="question-mark">?</span>;
             <span class="ident">cvt</span>(
                 <span class="self">self</span>,
-                <span class="ident">libtls</span>::<span class="ident">tls_connect_fds</span>(<span class="self">self</span>.<span class="number">0</span>, <span class="ident">fd_read</span>, <span class="ident">fd_write</span>, <span class="ident">c_servername</span>.<span class="ident">as_ptr</span>()),
+                <span class="ident">libtls_sys</span>::<span class="ident">tls_connect_fds</span>(<span class="self">self</span>.<span class="number">0</span>, <span class="ident">fd_read</span>, <span class="ident">fd_write</span>, <span class="ident">c_servername</span>.<span class="ident">as_ptr</span>()),
             )
         }
     }
@@ -1259,7 +1275,7 @@
             <span class="kw">let</span> <span class="ident">c_servername</span> <span class="op">=</span> <span class="ident">CString</span>::<span class="ident">new</span>(<span class="ident">servername</span>)<span class="question-mark">?</span>;
             <span class="ident">cvt</span>(
                 <span class="self">self</span>,
-                <span class="ident">libtls</span>::<span class="ident">tls_connect_servername</span>(
+                <span class="ident">libtls_sys</span>::<span class="ident">tls_connect_servername</span>(
                     <span class="self">self</span>.<span class="number">0</span>,
                     <span class="ident">c_host</span>.<span class="ident">as_ptr</span>(),
                     <span class="ident">std</span>::<span class="ident">ptr</span>::<span class="ident">null</span>(),
@@ -1273,6 +1289,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// The `connect_socket` method is a variant of [`connect_servername`] that</span>
     <span class="doccomment">/// can upgrade an already existing socket to TLS.</span>
+    <span class="doccomment">/// The socket `RawFd` is not closed after dropping the object.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// # See also</span>
     <span class="doccomment">///</span>
@@ -1284,15 +1301,17 @@
             <span class="kw">let</span> <span class="ident">c_servername</span> <span class="op">=</span> <span class="ident">CString</span>::<span class="ident">new</span>(<span class="ident">servername</span>)<span class="question-mark">?</span>;
             <span class="ident">cvt</span>(
                 <span class="self">self</span>,
-                <span class="ident">libtls</span>::<span class="ident">tls_connect_socket</span>(<span class="self">self</span>.<span class="number">0</span>, <span class="ident">socket</span>, <span class="ident">c_servername</span>.<span class="ident">as_ptr</span>()),
-            )
+                <span class="ident">libtls_sys</span>::<span class="ident">tls_connect_socket</span>(<span class="self">self</span>.<span class="number">0</span>, <span class="ident">socket</span>, <span class="ident">c_servername</span>.<span class="ident">as_ptr</span>()),
+            )<span class="question-mark">?</span>;
+            <span class="self">self</span>.<span class="number">1</span> <span class="op">=</span> <span class="ident">socket</span>;
+            <span class="prelude-val">Ok</span>(())
         }
     }
 
     <span class="doccomment">/// Initiate a new TLS connection over an established connection.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// The `connect_io` method can upgrade a connection to TLS on an</span>
-    <span class="doccomment">/// already established connection that implements the [`IntoRawFd`] trait,</span>
+    <span class="doccomment">/// The `connect_raw_fd` method can upgrade a connection to TLS on an</span>
+    <span class="doccomment">/// already established connection that implements the [`AsRawFd] trait,</span>
     <span class="doccomment">/// e.g. [`TcpStream`].</span>
     <span class="doccomment">/// It is a wrapper function on top of [`connect_socket`].</span>
     <span class="doccomment">///</span>
@@ -1302,14 +1321,12 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// [`connect_socket`]: #method.connect_socket</span>
     <span class="doccomment">/// [`TcpStream`]: https://doc.rust-lang.org/std/net/TcpStream.html</span>
-    <span class="doccomment">/// [`IntoRawFd`]: https://doc.rust-lang.org/std/os/unix/io/IntoRawFd.html</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">connect_io</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">raw_fd</span>: <span class="ident">T</span>, <span class="ident">servername</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span>
+    <span class="doccomment">/// [`AsRawFd`]: https://doc.rust-lang.org/std/os/unix/io/AsRawFd.html</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">connect_raw_fd</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">raw_fd</span>: <span class="kw-2">&amp;</span><span class="ident">T</span>, <span class="ident">servername</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">T</span>: <span class="ident">IntoRawFd</span>,
+        <span class="ident">T</span>: <span class="ident">AsRawFd</span>,
     {
-        <span class="comment">// Store fd to close it automatically when dropping the object</span>
-        <span class="self">self</span>.<span class="number">1</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">raw_fd</span>.<span class="ident">into_raw_fd</span>());
-        <span class="self">self</span>.<span class="ident">connect_socket</span>(<span class="self">self</span>.<span class="number">1</span>.<span class="ident">unwrap</span>(), <span class="ident">servername</span>)
+        <span class="self">self</span>.<span class="ident">connect_socket</span>(<span class="ident">raw_fd</span>.<span class="ident">as_raw_fd</span>(), <span class="ident">servername</span>)
     }
 
     <span class="doccomment">/// Initiate a new TLS connection with custom I/O callbacks.</span>
@@ -1334,7 +1351,7 @@
         <span class="kw">let</span> <span class="ident">cb_arg</span> <span class="op">=</span> <span class="ident">cb_arg</span>.<span class="ident">unwrap_or</span>(<span class="ident">std</span>::<span class="ident">ptr</span>::<span class="ident">null_mut</span>());
         <span class="ident">cvt</span>(
             <span class="self">self</span>,
-            <span class="ident">libtls</span>::<span class="ident">tls_connect_cbs</span>(<span class="self">self</span>.<span class="number">0</span>, <span class="ident">read_cb</span>, <span class="ident">write_cb</span>, <span class="ident">cb_arg</span>, <span class="ident">c_servername</span>.<span class="ident">as_ptr</span>()),
+            <span class="ident">libtls_sys</span>::<span class="ident">tls_connect_cbs</span>(<span class="self">self</span>.<span class="number">0</span>, <span class="ident">read_cb</span>, <span class="ident">write_cb</span>, <span class="ident">cb_arg</span>, <span class="ident">c_servername</span>.<span class="ident">as_ptr</span>()),
         )
     }
 
@@ -1371,7 +1388,7 @@
     <span class="doccomment">/// [`TLS_WANT_POLLIN`]: ../constant.TLS_WANT_POLLIN.html</span>
     <span class="doccomment">/// [`TLS_WANT_POLLOUT`]: ../constant.TLS_WANT_POLLOUT.html</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">tls_handshake</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">isize</span><span class="op">&gt;</span> {
-        <span class="ident">cvt_err</span>(<span class="self">self</span>, <span class="kw">unsafe</span> { <span class="ident">libtls</span>::<span class="ident">tls_handshake</span>(<span class="self">self</span>.<span class="number">0</span>) <span class="kw">as</span> <span class="ident">isize</span> })
+        <span class="ident">cvt_err</span>(<span class="self">self</span>, <span class="kw">unsafe</span> { <span class="ident">libtls_sys</span>::<span class="ident">tls_handshake</span>(<span class="self">self</span>.<span class="number">0</span>) <span class="kw">as</span> <span class="ident">isize</span> })
     }
 
     <span class="doccomment">/// Read bytes from the TLS connection.</span>
@@ -1392,7 +1409,7 @@
     <span class="doccomment">/// [`tls_handshake`]: #method.tls_handshake</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">tls_read</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">buf</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> [<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">isize</span><span class="op">&gt;</span> {
         <span class="ident">cvt_err</span>(<span class="self">self</span>, <span class="kw">unsafe</span> {
-            <span class="ident">libtls</span>::<span class="ident">tls_read</span>(<span class="self">self</span>.<span class="number">0</span>, <span class="ident">buf</span>.<span class="ident">as_mut_ptr</span>() <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">c_void</span>, <span class="ident">buf</span>.<span class="ident">len</span>())
+            <span class="ident">libtls_sys</span>::<span class="ident">tls_read</span>(<span class="self">self</span>.<span class="number">0</span>, <span class="ident">buf</span>.<span class="ident">as_mut_ptr</span>() <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">c_void</span>, <span class="ident">buf</span>.<span class="ident">len</span>())
         })
     }
 
@@ -1414,7 +1431,7 @@
     <span class="doccomment">/// [`tls_handshake`]: #method.tls_handshake</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">tls_write</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">buf</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">isize</span><span class="op">&gt;</span> {
         <span class="ident">cvt_err</span>(<span class="self">self</span>, <span class="kw">unsafe</span> {
-            <span class="ident">libtls</span>::<span class="ident">tls_write</span>(<span class="self">self</span>.<span class="number">0</span>, <span class="ident">buf</span>.<span class="ident">as_ptr</span>() <span class="kw">as</span> <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">c_void</span>, <span class="ident">buf</span>.<span class="ident">len</span>())
+            <span class="ident">libtls_sys</span>::<span class="ident">tls_write</span>(<span class="self">self</span>.<span class="number">0</span>, <span class="ident">buf</span>.<span class="ident">as_ptr</span>() <span class="kw">as</span> <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">c_void</span>, <span class="ident">buf</span>.<span class="ident">len</span>())
         })
     }
 
@@ -1436,7 +1453,7 @@
     <span class="doccomment">/// [`connect`]: #method.connect</span>
     <span class="doccomment">/// [`connect_servername`]: #method.connect_servername</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">close</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">isize</span><span class="op">&gt;</span> {
-        <span class="ident">cvt_err</span>(<span class="self">self</span>, <span class="kw">unsafe</span> { <span class="ident">libtls</span>::<span class="ident">tls_close</span>(<span class="self">self</span>.<span class="number">0</span>) <span class="kw">as</span> <span class="ident">isize</span> })
+        <span class="ident">cvt_err</span>(<span class="self">self</span>, <span class="kw">unsafe</span> { <span class="ident">libtls_sys</span>::<span class="ident">tls_close</span>(<span class="self">self</span>.<span class="number">0</span>) <span class="kw">as</span> <span class="ident">isize</span> })
     }
 
     <span class="doccomment">/// Check for peer certificate.</span>
@@ -1448,7 +1465,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// [`tls_peer_cert_provided(3)`](https://man.openbsd.org/tls_peer_cert_provided.3)</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">peer_cert_provided</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
-        <span class="kw">unsafe</span> { <span class="ident">libtls</span>::<span class="ident">tls_peer_cert_provided</span>(<span class="self">self</span>.<span class="number">0</span>) <span class="op">!</span><span class="op">=</span> <span class="number">0</span> }
+        <span class="kw">unsafe</span> { <span class="ident">libtls_sys</span>::<span class="ident">tls_peer_cert_provided</span>(<span class="self">self</span>.<span class="number">0</span>) <span class="op">!</span><span class="op">=</span> <span class="number">0</span> }
     }
 
     <span class="doccomment">/// Check if the peer certificate includes a matching name.</span>
@@ -1462,7 +1479,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">peer_cert_contains_name</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span> {
         <span class="kw">unsafe</span> {
             <span class="kw">let</span> <span class="ident">c_name</span> <span class="op">=</span> <span class="ident">CString</span>::<span class="ident">new</span>(<span class="ident">name</span>)<span class="question-mark">?</span>;
-            <span class="prelude-val">Ok</span>(<span class="ident">libtls</span>::<span class="ident">tls_peer_cert_contains_name</span>(<span class="self">self</span>.<span class="number">0</span>, <span class="ident">c_name</span>.<span class="ident">as_ptr</span>()) <span class="op">!</span><span class="op">=</span> <span class="number">0</span>)
+            <span class="prelude-val">Ok</span>(<span class="ident">libtls_sys</span>::<span class="ident">tls_peer_cert_contains_name</span>(<span class="self">self</span>.<span class="number">0</span>, <span class="ident">c_name</span>.<span class="ident">as_ptr</span>()) <span class="op">!</span><span class="op">=</span> <span class="number">0</span>)
         }
     }
 
@@ -1485,7 +1502,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// [`tls_peer_cert_hash(3)`](https://man.openbsd.org/tls_peer_cert_hash.3)</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">peer_cert_hash</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
-        <span class="kw">unsafe</span> { <span class="ident">cvt_string</span>(<span class="self">self</span>, <span class="ident">libtls</span>::<span class="ident">tls_peer_cert_hash</span>(<span class="self">self</span>.<span class="number">0</span>)) }
+        <span class="kw">unsafe</span> { <span class="ident">cvt_string</span>(<span class="self">self</span>, <span class="ident">libtls_sys</span>::<span class="ident">tls_peer_cert_hash</span>(<span class="self">self</span>.<span class="number">0</span>)) }
     }
 
     <span class="doccomment">/// Return the issuer of the peer certificate.</span>
@@ -1497,7 +1514,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// [`tls_peer_cert_issuer(3)`](https://man.openbsd.org/tls_peer_cert_issuer.3)</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">peer_cert_issuer</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
-        <span class="kw">unsafe</span> { <span class="ident">cvt_string</span>(<span class="self">self</span>, <span class="ident">libtls</span>::<span class="ident">tls_peer_cert_issuer</span>(<span class="self">self</span>.<span class="number">0</span>)) }
+        <span class="kw">unsafe</span> { <span class="ident">cvt_string</span>(<span class="self">self</span>, <span class="ident">libtls_sys</span>::<span class="ident">tls_peer_cert_issuer</span>(<span class="self">self</span>.<span class="number">0</span>)) }
     }
 
     <span class="doccomment">/// Return the subject of the peer certificate.</span>
@@ -1509,7 +1526,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// [`tls_peer_cert_subject(3)`](https://man.openbsd.org/tls_peer_cert_subject.3)</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">peer_cert_subject</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
-        <span class="kw">unsafe</span> { <span class="ident">cvt_string</span>(<span class="self">self</span>, <span class="ident">libtls</span>::<span class="ident">tls_peer_cert_subject</span>(<span class="self">self</span>.<span class="number">0</span>)) }
+        <span class="kw">unsafe</span> { <span class="ident">cvt_string</span>(<span class="self">self</span>, <span class="ident">libtls_sys</span>::<span class="ident">tls_peer_cert_subject</span>(<span class="self">self</span>.<span class="number">0</span>)) }
     }
 
     <span class="doccomment">/// Return the start of the validity period of the peer certififcate.</span>
@@ -1521,7 +1538,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// [`tls_peer_cert_notbefore(3)`](https://man.openbsd.org/tls_peer_cert_notbefore.3)</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">peer_cert_notbefore</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SystemTime</span><span class="op">&gt;</span> {
-        <span class="ident">cvt_time</span>(<span class="self">self</span>, <span class="kw">unsafe</span> { <span class="ident">libtls</span>::<span class="ident">tls_peer_cert_notbefore</span>(<span class="self">self</span>.<span class="number">0</span>) })
+        <span class="ident">cvt_time</span>(<span class="self">self</span>, <span class="kw">unsafe</span> { <span class="ident">libtls_sys</span>::<span class="ident">tls_peer_cert_notbefore</span>(<span class="self">self</span>.<span class="number">0</span>) })
     }
 
     <span class="doccomment">/// Return the end of the validity period of the peer certififcate.</span>
@@ -1535,7 +1552,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// [`tls_peer_cert_notafter(3)`](https://man.openbsd.org/tls_peer_cert_notafter.3)</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">peer_cert_notafter</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SystemTime</span><span class="op">&gt;</span> {
-        <span class="ident">cvt_time</span>(<span class="self">self</span>, <span class="kw">unsafe</span> { <span class="ident">libtls</span>::<span class="ident">tls_peer_cert_notafter</span>(<span class="self">self</span>.<span class="number">0</span>) })
+        <span class="ident">cvt_time</span>(<span class="self">self</span>, <span class="kw">unsafe</span> { <span class="ident">libtls_sys</span>::<span class="ident">tls_peer_cert_notafter</span>(<span class="self">self</span>.<span class="number">0</span>) })
     }
 
     <span class="doccomment">/// Return the PEM-encoded peer certificate.</span>
@@ -1549,7 +1566,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">peer_cert_chain_pem</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">unsafe</span> {
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">size</span> <span class="op">=</span> <span class="number">0</span>;
-            <span class="kw">let</span> <span class="ident">ptr</span> <span class="op">=</span> <span class="ident">libtls</span>::<span class="ident">tls_peer_cert_chain_pem</span>(<span class="self">self</span>.<span class="number">0</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">size</span>);
+            <span class="kw">let</span> <span class="ident">ptr</span> <span class="op">=</span> <span class="ident">libtls_sys</span>::<span class="ident">tls_peer_cert_chain_pem</span>(<span class="self">self</span>.<span class="number">0</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">size</span>);
             <span class="kw">if</span> <span class="ident">ptr</span>.<span class="ident">is_null</span>() {
                 <span class="kw">let</span> <span class="ident">errstr</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">last_error</span>().<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="string">&quot;no error&quot;</span>.<span class="ident">to_string</span>());
                 <span class="self">Self</span>::<span class="ident">to_error</span>(<span class="ident">errstr</span>)
@@ -1571,7 +1588,7 @@
     <span class="doccomment">/// [`tls_conn_alpn_selected(3)`](https://man.openbsd.org/tls_conn_alpn_selected.3)</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">conn_alpn_selected</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
         <span class="kw">unsafe</span> {
-            <span class="kw">let</span> <span class="ident">ptr</span> <span class="op">=</span> <span class="ident">libtls</span>::<span class="ident">tls_conn_alpn_selected</span>(<span class="self">self</span>.<span class="number">0</span>);
+            <span class="kw">let</span> <span class="ident">ptr</span> <span class="op">=</span> <span class="ident">libtls_sys</span>::<span class="ident">tls_conn_alpn_selected</span>(<span class="self">self</span>.<span class="number">0</span>);
             <span class="kw">if</span> <span class="ident">ptr</span>.<span class="ident">is_null</span>() {
                 <span class="prelude-val">None</span>
             } <span class="kw">else</span> {
@@ -1591,7 +1608,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// [`tls_conn_cipher(3)`](https://man.openbsd.org/tls_conn_cipher.3)</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">conn_cipher</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
-        <span class="kw">unsafe</span> { <span class="ident">cvt_string</span>(<span class="self">self</span>, <span class="ident">libtls</span>::<span class="ident">tls_conn_cipher</span>(<span class="self">self</span>.<span class="number">0</span>)) }
+        <span class="kw">unsafe</span> { <span class="ident">cvt_string</span>(<span class="self">self</span>, <span class="ident">libtls_sys</span>::<span class="ident">tls_conn_cipher</span>(<span class="self">self</span>.<span class="number">0</span>)) }
     }
 
     <span class="doccomment">/// Return the client&#39;s server name.</span>
@@ -1604,7 +1621,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// [`tls_conn_servername(3)`](https://man.openbsd.org/tls_conn_servername.3)</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">conn_servername</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
-        <span class="kw">unsafe</span> { <span class="ident">cvt_string</span>(<span class="self">self</span>, <span class="ident">libtls</span>::<span class="ident">tls_conn_servername</span>(<span class="self">self</span>.<span class="number">0</span>)) }
+        <span class="kw">unsafe</span> { <span class="ident">cvt_string</span>(<span class="self">self</span>, <span class="ident">libtls_sys</span>::<span class="ident">tls_conn_servername</span>(<span class="self">self</span>.<span class="number">0</span>)) }
     }
 
     <span class="doccomment">/// Check if a TLS session has been resumed.</span>
@@ -1617,7 +1634,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// [`tls_conn_session_resumed(3)`](https://man.openbsd.org/tls_conn_session_resumed.3)</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">conn_session_resumed</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
-        <span class="kw">unsafe</span> { <span class="ident">libtls</span>::<span class="ident">tls_conn_session_resumed</span>(<span class="self">self</span>.<span class="number">0</span>) <span class="op">!</span><span class="op">=</span> <span class="number">0</span> }
+        <span class="kw">unsafe</span> { <span class="ident">libtls_sys</span>::<span class="ident">tls_conn_session_resumed</span>(<span class="self">self</span>.<span class="number">0</span>) <span class="op">!</span><span class="op">=</span> <span class="number">0</span> }
     }
 
     <span class="doccomment">/// Return the negotiated TLS version as a string.</span>
@@ -1629,7 +1646,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// [`tls_conn_version(3)`](https://man.openbsd.org/tls_conn_version.3)</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">conn_version</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
-        <span class="kw">unsafe</span> { <span class="ident">cvt_string</span>(<span class="self">self</span>, <span class="ident">libtls</span>::<span class="ident">tls_conn_version</span>(<span class="self">self</span>.<span class="number">0</span>)) }
+        <span class="kw">unsafe</span> { <span class="ident">cvt_string</span>(<span class="self">self</span>, <span class="ident">libtls_sys</span>::<span class="ident">tls_conn_version</span>(<span class="self">self</span>.<span class="number">0</span>)) }
     }
 
     <span class="doccomment">/// Process a raw OCSP response.</span>
@@ -1643,7 +1660,7 @@
     <span class="doccomment">/// [`tls_ocsp_process_response(3)`](https://man.openbsd.org/tls_ocsp_process_response.3)</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">ocsp_process_response</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">response</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="ident">cvt</span>(<span class="self">self</span>, <span class="kw">unsafe</span> {
-            <span class="ident">libtls</span>::<span class="ident">tls_ocsp_process_response</span>(<span class="self">self</span>.<span class="number">0</span>, <span class="ident">response</span>.<span class="ident">as_ptr</span>(), <span class="ident">response</span>.<span class="ident">len</span>())
+            <span class="ident">libtls_sys</span>::<span class="ident">tls_ocsp_process_response</span>(<span class="self">self</span>.<span class="number">0</span>, <span class="ident">response</span>.<span class="ident">as_ptr</span>(), <span class="ident">response</span>.<span class="ident">len</span>())
         })
     }
 
@@ -1657,7 +1674,7 @@
     <span class="doccomment">/// [`tls_peer_ocsp_cert_status(3)`](https://man.openbsd.org/tls_peer_ocsp_cert_status.3)</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">peer_ocsp_cert_status</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">isize</span><span class="op">&gt;</span> {
         <span class="ident">cvt_err</span>(<span class="self">self</span>, <span class="kw">unsafe</span> {
-            <span class="ident">libtls</span>::<span class="ident">tls_peer_ocsp_cert_status</span>(<span class="self">self</span>.<span class="number">0</span>) <span class="kw">as</span> <span class="ident">isize</span>
+            <span class="ident">libtls_sys</span>::<span class="ident">tls_peer_ocsp_cert_status</span>(<span class="self">self</span>.<span class="number">0</span>) <span class="kw">as</span> <span class="ident">isize</span>
         })
     }
 
@@ -1671,7 +1688,7 @@
     <span class="doccomment">/// [`tls_peer_ocsp_crl_reason(3)`](https://man.openbsd.org/tls_peer_ocsp_crl_reason.3)</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">peer_ocsp_crl_reason</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">isize</span><span class="op">&gt;</span> {
         <span class="ident">cvt_err</span>(<span class="self">self</span>, <span class="kw">unsafe</span> {
-            <span class="ident">libtls</span>::<span class="ident">tls_peer_ocsp_crl_reason</span>(<span class="self">self</span>.<span class="number">0</span>) <span class="kw">as</span> <span class="ident">isize</span>
+            <span class="ident">libtls_sys</span>::<span class="ident">tls_peer_ocsp_crl_reason</span>(<span class="self">self</span>.<span class="number">0</span>) <span class="kw">as</span> <span class="ident">isize</span>
         })
     }
 
@@ -1683,7 +1700,9 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// [`tls_peer_ocsp_next_update(3)`](https://man.openbsd.org/tls_peer_ocsp_next_update.3)</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">peer_ocsp_next_update</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SystemTime</span><span class="op">&gt;</span> {
-        <span class="ident">cvt_time</span>(<span class="self">self</span>, <span class="kw">unsafe</span> { <span class="ident">libtls</span>::<span class="ident">tls_peer_ocsp_next_update</span>(<span class="self">self</span>.<span class="number">0</span>) })
+        <span class="ident">cvt_time</span>(<span class="self">self</span>, <span class="kw">unsafe</span> {
+            <span class="ident">libtls_sys</span>::<span class="ident">tls_peer_ocsp_next_update</span>(<span class="self">self</span>.<span class="number">0</span>)
+        })
     }
 
     <span class="doccomment">/// OCSP response status.</span>
@@ -1696,7 +1715,7 @@
     <span class="doccomment">/// [`tls_peer_ocsp_response_status(3)`](https://man.openbsd.org/tls_peer_ocsp_response_status.3)</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">peer_ocsp_response_status</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">isize</span><span class="op">&gt;</span> {
         <span class="ident">cvt_err</span>(<span class="self">self</span>, <span class="kw">unsafe</span> {
-            <span class="ident">libtls</span>::<span class="ident">tls_peer_ocsp_response_status</span>(<span class="self">self</span>.<span class="number">0</span>) <span class="kw">as</span> <span class="ident">isize</span>
+            <span class="ident">libtls_sys</span>::<span class="ident">tls_peer_ocsp_response_status</span>(<span class="self">self</span>.<span class="number">0</span>) <span class="kw">as</span> <span class="ident">isize</span>
         })
     }
 
@@ -1712,7 +1731,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// [`tls_peer_ocsp_result(3)`](https://man.openbsd.org/tls_peer_ocsp_result.3)</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">peer_ocsp_result</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
-        <span class="kw">unsafe</span> { <span class="ident">cvt_string</span>(<span class="self">self</span>, <span class="ident">libtls</span>::<span class="ident">tls_peer_ocsp_result</span>(<span class="self">self</span>.<span class="number">0</span>)) }
+        <span class="kw">unsafe</span> { <span class="ident">cvt_string</span>(<span class="self">self</span>, <span class="ident">libtls_sys</span>::<span class="ident">tls_peer_ocsp_result</span>(<span class="self">self</span>.<span class="number">0</span>)) }
     }
 
     <span class="doccomment">/// OCSP revocation time.</span>
@@ -1724,7 +1743,7 @@
     <span class="doccomment">/// [`tls_peer_ocsp_revocation_time(3)`](https://man.openbsd.org/tls_peer_ocsp_revocation_time.3)</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">peer_ocsp_revocation_time</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SystemTime</span><span class="op">&gt;</span> {
         <span class="ident">cvt_time</span>(<span class="self">self</span>, <span class="kw">unsafe</span> {
-            <span class="ident">libtls</span>::<span class="ident">tls_peer_ocsp_revocation_time</span>(<span class="self">self</span>.<span class="number">0</span>)
+            <span class="ident">libtls_sys</span>::<span class="ident">tls_peer_ocsp_revocation_time</span>(<span class="self">self</span>.<span class="number">0</span>)
         })
     }
 
@@ -1736,7 +1755,9 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// [`tls_peer_ocsp_this_update(3)`](https://man.openbsd.org/tls_peer_ocsp_this_update.3)</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">peer_ocsp_this_update</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SystemTime</span><span class="op">&gt;</span> {
-        <span class="ident">cvt_time</span>(<span class="self">self</span>, <span class="kw">unsafe</span> { <span class="ident">libtls</span>::<span class="ident">tls_peer_ocsp_this_update</span>(<span class="self">self</span>.<span class="number">0</span>) })
+        <span class="ident">cvt_time</span>(<span class="self">self</span>, <span class="kw">unsafe</span> {
+            <span class="ident">libtls_sys</span>::<span class="ident">tls_peer_ocsp_this_update</span>(<span class="self">self</span>.<span class="number">0</span>)
+        })
     }
 
     <span class="doccomment">/// OCSP validation URL.</span>
@@ -1748,7 +1769,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// [`tls_peer_ocsp_url(3)`](https://man.openbsd.org/tls_peer_ocsp_url.3)</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">peer_ocsp_url</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
-        <span class="kw">unsafe</span> { <span class="ident">cvt_string</span>(<span class="self">self</span>, <span class="ident">libtls</span>::<span class="ident">tls_peer_ocsp_url</span>(<span class="self">self</span>.<span class="number">0</span>)) }
+        <span class="kw">unsafe</span> { <span class="ident">cvt_string</span>(<span class="self">self</span>, <span class="ident">libtls_sys</span>::<span class="ident">tls_peer_ocsp_url</span>(<span class="self">self</span>.<span class="number">0</span>)) }
     }
 }
 
@@ -1765,7 +1786,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// [`tls_error(3)`](https://man.openbsd.org/tls_error.3)</span>
     <span class="kw">fn</span> <span class="ident">last_error</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
-        <span class="kw">unsafe</span> { <span class="ident">cvt_no_error</span>(<span class="ident">libtls</span>::<span class="ident">tls_error</span>(<span class="self">self</span>.<span class="number">0</span>)) }
+        <span class="kw">unsafe</span> { <span class="ident">cvt_no_error</span>(<span class="ident">libtls_sys</span>::<span class="ident">tls_error</span>(<span class="self">self</span>.<span class="number">0</span>)) }
     }
 
     <span class="kw">fn</span> <span class="ident">to_error</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="ident">errstr</span>: <span class="ident">String</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
@@ -1773,12 +1794,19 @@
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">libtls</span>::<span class="ident">tls</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Tls</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">tls</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">libtls</span>::<span class="ident">tls</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">libtls_sys</span>::<span class="ident">tls</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Tls</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">tls</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">libtls_sys</span>::<span class="ident">tls</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="kw">if</span> <span class="ident">tls</span>.<span class="ident">is_null</span>() {
             <span class="macro">panic</span><span class="macro">!</span>(<span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">last_os_error</span>())
         }
-        <span class="ident">Tls</span>(<span class="ident">tls</span>, <span class="prelude-val">None</span>)
+        <span class="ident">Tls</span>(<span class="ident">tls</span>, <span class="op">-</span><span class="number">1</span>)
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">AsRawFd</span> <span class="kw">for</span> <span class="ident">Tls</span> {
+    <span class="kw">fn</span> <span class="ident">as_raw_fd</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">RawFd</span> {
+        <span class="comment">// Returns -1 if the fd is not set (-1 is common unix convention)</span>
+        <span class="self">self</span>.<span class="number">1</span>
     }
 }
 
@@ -1803,19 +1831,15 @@
     <span class="doccomment">/// [`tls_close(3)`]: https://man.openbsd.org/tls_close.3</span>
     <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
         <span class="kw">unsafe</span> {
-            <span class="comment">// XXX Make sure that the underlying fd is not leaked.</span>
-            <span class="comment">// XXX libtls doesn&#39;t close the socket in tls_free(3), but</span>
+            <span class="comment">// XXX libtls doesn&#39;t close the connection in tls_free(3), but</span>
             <span class="comment">// XXX this wouldn&#39;t satisfy the safety rules of Rust.</span>
             <span class="kw">loop</span> {
-                <span class="kw">let</span> <span class="ident">ret</span> <span class="op">=</span> <span class="ident">libtls</span>::<span class="ident">tls_close</span>(<span class="self">self</span>.<span class="number">0</span>);
+                <span class="kw">let</span> <span class="ident">ret</span> <span class="op">=</span> <span class="ident">libtls_sys</span>::<span class="ident">tls_close</span>(<span class="self">self</span>.<span class="number">0</span>);
                 <span class="kw">if</span> <span class="op">!</span>(<span class="ident">ret</span> <span class="op">=</span><span class="op">=</span> <span class="ident">TLS_WANT_POLLIN</span> <span class="op">|</span><span class="op">|</span> <span class="ident">ret</span> <span class="op">=</span><span class="op">=</span> <span class="ident">TLS_WANT_POLLOUT</span>) {
                     <span class="kw">break</span>;
                 }
             }
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">fd</span>) <span class="op">=</span> <span class="self">self</span>.<span class="number">1</span> {
-                <span class="ident">libtls</span>::<span class="ident">close</span>(<span class="ident">fd</span>);
-            }
-            <span class="ident">libtls</span>::<span class="ident">tls_free</span>(<span class="self">self</span>.<span class="number">0</span>);
+            <span class="ident">libtls_sys</span>::<span class="ident">tls_free</span>(<span class="self">self</span>.<span class="number">0</span>);
         };
     }
 }
@@ -1890,12 +1914,12 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// [`Tls::accept_cbs`]: struct.Tls.html#method.accept_cbs</span>
 <span class="doccomment">/// [`Tls::connect_cbs`]: struct.Tls.html#method.connect_cbs</span>
-<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">TlsReadCb</span> <span class="op">=</span> <span class="ident">libtls</span>::<span class="ident">tls_read_cb</span>;
+<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">TlsReadCb</span> <span class="op">=</span> <span class="ident">libtls_sys</span>::<span class="ident">tls_read_cb</span>;
 
 <span class="doccomment">/// Write callback for [`Tls::accept_cbs`] and [`Tls::connect_cbs`].</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// [`Tls::accept_cbs`]: struct.Tls.html#method.accept_cbs</span>
 <span class="doccomment">/// [`Tls::connect_cbs`]: struct.Tls.html#method.connect_cbs</span>
-<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">TlsWriteCb</span> <span class="op">=</span> <span class="ident">libtls</span>::<span class="ident">tls_write_cb</span>;
+<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">TlsWriteCb</span> <span class="op">=</span> <span class="ident">libtls_sys</span>::<span class="ident">tls_write_cb</span>;
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><aside id="help" class="hidden"><div><h1 class="hidden">Help</h1><div class="shortcuts"><h2>Keyboard Shortcuts</h2><dl><dt><kbd>?</kbd></dt><dd>Show this help dialog</dd><dt><kbd>S</kbd></dt><dd>Focus the search field</dd><dt><kbd>↑</kbd></dt><dd>Move up in search results</dd><dt><kbd>↓</kbd></dt><dd>Move down in search results</dd><dt><kbd>↹</kbd></dt><dd>Switch tab</dd><dt><kbd>&#9166;</kbd></dt><dd>Go to active search result</dd><dt><kbd>+</kbd></dt><dd>Expand all sections</dd><dt><kbd>-</kbd></dt><dd>Collapse all sections</dd></dl></div><div class="infos"><h2>Search Tricks</h2><p>Prefix searches with a type followed by a colon (e.g., <code>fn:</code>) to restrict the search to a given type.</p><p>Accepted types are: <code>fn</code>, <code>mod</code>, <code>struct</code>, <code>enum</code>, <code>trait</code>, <code>type</code>, <code>macro</code>, and <code>const</code>.</p><p>Search functions by type signature (e.g., <code>vec -> usize</code> or <code>* -> vec</code>)</p><p>Search multiple things at once by splitting your query with comma (e.g., <code>str,u8</code> or <code>String,struct:Vec,test</code>)</p></div></div></aside><script>window.rootPath = "../../";window.currentCrate = "libtls";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>

@@ -231,6 +231,9 @@
 <span id="231">231</span>
 <span id="232">232</span>
 <span id="233">233</span>
+<span id="234">234</span>
+<span id="235">235</span>
+<span id="236">236</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Rust bindings for [LibreSSL]&#39;s [libtls] library.</span>
 <span class="doccomment">//!</span>
@@ -333,7 +336,7 @@
 )]</span>
 <span class="attribute">#![<span class="ident">warn</span>(<span class="ident">missing_docs</span>)]</span>
 
-<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">libtls_sys</span> <span class="kw">as</span> <span class="ident">libtls</span>;
+<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">libtls_sys</span>;
 
 <span class="doccomment">///</span>
 <span class="doccomment">/// TLS configuration for connections.</span>
@@ -352,13 +355,13 @@
 <span class="kw">mod</span> <span class="ident">util</span>;
 
 <span class="doccomment">/// TLS API version.</span>
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">libtls</span>::<span class="ident">TLS_API</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">libtls_sys</span>::<span class="ident">TLS_API</span>;
 
 <span class="kw">use</span> <span class="ident">util</span>::<span class="kw-2">*</span>;
 
 <span class="doccomment">/// TLS major/minor protocol version.</span>
 <span class="attribute">#[<span class="ident">rustfmt</span>::<span class="ident">skip</span>]</span>
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">libtls</span>::{
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">libtls_sys</span>::{
     <span class="ident">TLS_PROTOCOL_TLSv1_0</span>,
     <span class="ident">TLS_PROTOCOL_TLSv1_1</span>,
     <span class="ident">TLS_PROTOCOL_TLSv1_2</span>,
@@ -369,14 +372,14 @@
 
 <span class="doccomment">/// TLS async I/O.</span>
 <span class="attribute">#[<span class="ident">rustfmt</span>::<span class="ident">skip</span>]</span>
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">libtls</span>::{
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">libtls_sys</span>::{
     <span class="ident">TLS_WANT_POLLIN</span>,
     <span class="ident">TLS_WANT_POLLOUT</span>
 };
 
 <span class="doccomment">/// OCSP response (RFC 6960 Section 2.3).</span>
 <span class="attribute">#[<span class="ident">rustfmt</span>::<span class="ident">skip</span>]</span>
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">libtls</span>::{
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">libtls_sys</span>::{
     <span class="ident">TLS_OCSP_RESPONSE_SUCCESSFUL</span>,
     <span class="ident">TLS_OCSP_RESPONSE_MALFORMED</span>,
     <span class="ident">TLS_OCSP_RESPONSE_INTERNALERROR</span>,
@@ -387,7 +390,7 @@
 
 <span class="doccomment">/// OCSP certificate (RFC 6960 Section 2.2).</span>
 <span class="attribute">#[<span class="ident">rustfmt</span>::<span class="ident">skip</span>]</span>
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">libtls</span>::{
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">libtls_sys</span>::{
     <span class="ident">TLS_OCSP_CERT_GOOD</span>,
     <span class="ident">TLS_OCSP_CERT_REVOKED</span>,
     <span class="ident">TLS_OCSP_CERT_UNKNOWN</span>
@@ -395,7 +398,7 @@
 
 <span class="doccomment">/// CRL (RFC 5280 Section 5.3.1).</span>
 <span class="attribute">#[<span class="ident">rustfmt</span>::<span class="ident">skip</span>]</span>
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">libtls</span>::{
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">libtls_sys</span>::{
     <span class="ident">TLS_CRL_REASON_UNSPECIFIED</span>,
     <span class="ident">TLS_CRL_REASON_KEY_COMPROMISE</span>,
     <span class="ident">TLS_CRL_REASON_CA_COMPROMISE</span>,
@@ -410,7 +413,7 @@
 
 <span class="doccomment">/// TLS session.</span>
 <span class="attribute">#[<span class="ident">rustfmt</span>::<span class="ident">skip</span>]</span>
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">libtls</span>::{
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">libtls_sys</span>::{
     <span class="ident">TLS_MAX_SESSION_ID_LENGTH</span>,
     <span class="ident">TLS_TICKET_KEY_SIZE</span>
 };
@@ -430,28 +433,31 @@
     <span class="ident">note</span> <span class="op">=</span> <span class="string">&quot;It is no longer necessary to call this function.&quot;</span>
 )]</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">init</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-    <span class="ident">cvt_io</span>((), <span class="kw">unsafe</span> { <span class="ident">libtls</span>::<span class="ident">tls_init</span>() })
+    <span class="ident">cvt_io</span>((), <span class="kw">unsafe</span> { <span class="ident">libtls_sys</span>::<span class="ident">tls_init</span>() })
 }
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">test</span> {
-    <span class="kw">use</span> <span class="kw">super</span>::<span class="ident">config</span>::<span class="kw-2">*</span>;
-    <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
+    <span class="kw">use</span> <span class="kw">super</span>::<span class="ident">config</span>::<span class="ident">TlsConfigBuilder</span>;
+    <span class="kw">use</span> <span class="kw">super</span>::<span class="ident">error</span>;
     <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>::{<span class="ident">Read</span>, <span class="ident">Write</span>};
 
-    <span class="kw">fn</span> <span class="ident">cloudflare_sync_client</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buf</span> <span class="op">=</span> [<span class="number">0u8</span>; <span class="number">32</span>];
-        <span class="kw">let</span> <span class="ident">ca_path</span> <span class="op">=</span> <span class="ident">default_ca_cert_file</span>();
+    <span class="kw">fn</span> <span class="ident">sync_https_connect</span>(<span class="ident">servername</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> <span class="kw-2">&amp;</span>(<span class="ident">servername</span>.<span class="ident">to_owned</span>() <span class="op">+</span> <span class="string">&quot;:443&quot;</span>);
 
-        <span class="comment">// XXX workaround for hardcoded CA file</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tls</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">ca_path</span>.<span class="ident">exists</span>() {
-            <span class="ident">TlsConfigBuilder</span>::<span class="ident">new</span>().<span class="ident">client</span>()<span class="question-mark">?</span>
-        } <span class="kw">else</span> {
-            <span class="ident">TlsConfigBuilder</span>::<span class="ident">new</span>().<span class="ident">ca_path</span>(<span class="string">&quot;/etc/ssl/certs&quot;</span>).<span class="ident">client</span>()<span class="question-mark">?</span>
-        };
+        <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
+            <span class="string">&quot;GET / HTTP/1.1\r\n\
+             Host: {}\r\n\
+             Connection: close\r\n\r\n&quot;</span>,
+            <span class="ident">servername</span>
+        );
 
-        <span class="ident">tls</span>.<span class="ident">connect_servername</span>((<span class="string">&quot;1.1.1.1&quot;</span>, <span class="number">443</span>), <span class="string">&quot;cloudflare-dns.com&quot;</span>)<span class="question-mark">?</span>;
-        <span class="ident">tls</span>.<span class="ident">write</span>(<span class="string">b&quot;GET / HTTP/1.1\r\nHost: cloudflare-dns.com\r\n\r\n&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tls</span> <span class="op">=</span> <span class="ident">TlsConfigBuilder</span>::<span class="ident">new</span>().<span class="ident">client</span>()<span class="question-mark">?</span>;
+
+        <span class="ident">tls</span>.<span class="ident">connect</span>(<span class="ident">addr</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+        <span class="ident">tls</span>.<span class="ident">write</span>(<span class="ident">request</span>.<span class="ident">as_bytes</span>())<span class="question-mark">?</span>;
+
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buf</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="number">0u8</span>; <span class="number">1024</span>];
         <span class="ident">tls</span>.<span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">buf</span>)<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="ident">ok</span> <span class="op">=</span> <span class="string">b&quot;HTTP/1.1 200 OK\r\n&quot;</span>;
@@ -461,8 +467,8 @@
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">test_cloudflare_sync_client</span>() {
-        <span class="ident">cloudflare_sync_client</span>().<span class="ident">unwrap</span>();
+    <span class="kw">fn</span> <span class="ident">test_sync_https_connect</span>() {
+        <span class="ident">sync_https_connect</span>(<span class="string">&quot;www.example.com&quot;</span>).<span class="ident">unwrap</span>();
     }
 }
 </pre></div>
