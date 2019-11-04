@@ -254,11 +254,9 @@ impl Tls {
             let res = match port {
                 Some(val) => {
                     let c_port = CString::new(val)?;
-		    libtls_sys::tls_connect(self.0, c_host.as_ptr(), c_port.as_ptr())
+                    libtls_sys::tls_connect(self.0, c_host.as_ptr(), c_port.as_ptr())
                 }
-                None => {
-		    libtls_sys::tls_connect(self.0, c_host.as_ptr(), std::ptr::null())
-		}
+                None => libtls_sys::tls_connect(self.0, c_host.as_ptr(), std::ptr::null()),
             };
             cvt(self, res)
         }
