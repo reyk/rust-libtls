@@ -1272,7 +1272,10 @@ impl TlsConfigBuilder {
                 KeyData::Path(path) => config.set_ca_path(path)?,
                 _ => return Err(error::TlsError::NoError),
             };
-        }
+        } else if !default_ca_cert_file().exists() {
+            // Try to use the default CA path as a fallback.
+            config.set_ca_path("/etc/ssl/certs")?;
+        };
         if let Some(ref ciphers) = self.ciphers {
             config.set_ciphers(ciphers)?;
         }
