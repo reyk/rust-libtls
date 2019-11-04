@@ -251,17 +251,16 @@ impl Tls {
     pub fn connect(&mut self, host: &str, port: Option<&str>) -> Result<()> {
         unsafe {
             let c_host = CString::new(host)?;
-            let c_port = match port {
-                Some(port) => {
-                    let c_port = CString::new(port)?;
-                    c_port.as_ptr()
+            let res = match port {
+                Some(val) => {
+                    let c_port = CString::new(val)?;
+		    libtls_sys::tls_connect(self.0, c_host.as_ptr(), c_port.as_ptr())
                 }
-                None => std::ptr::null(),
+                None => {
+		    libtls_sys::tls_connect(self.0, c_host.as_ptr(), std::ptr::null())
+		}
             };
-            cvt(
-                self,
-                libtls_sys::tls_connect(self.0, c_host.as_ptr(), c_port),
-            )
+            cvt(self, res)
         }
     }
 
