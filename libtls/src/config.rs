@@ -1177,7 +1177,7 @@ pub fn unload_file(mut data: Vec<u8>) {
     unsafe { libtls_sys::tls_unload_file(ptr, len) }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum KeyData {
     File(PathBuf),
     Path(PathBuf),
@@ -1213,7 +1213,7 @@ enum KeyData {
 /// ```
 ///
 /// [`TlsConfig`]: struct.TlsConfig.html
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct TlsConfigBuilder {
     alpn: Option<String>,
     ca: Option<KeyData>,

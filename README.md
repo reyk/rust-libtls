@@ -1,4 +1,4 @@
-# Rust bindings for [LibreSSL]'s [libtls] library.
+# Rust bindings for [LibreSSL]'s [libtls].
 
 [![Crates.IO](https://img.shields.io/crates/v/libtls.svg)](https://crates.io/crates/libtls)
 [![Build Status](https://travis-ci.org/reyk/rust-libtls.svg?branch=master)](https://travis-ci.org/reyk/rust-libtls)
@@ -14,9 +14,15 @@ improved security, and to apply best practice development processes.
 [libcrypto] libraries.  It also provides [libtls], a new TLS library that
 is designed to make it easier to write foolproof applications.
 
-This crate provides Rust language bindings for [libtls] only, as the other
-[LibreSSL] APIs can be used with the existing [rust-openssl] crate.
-[LibreSSL] versions 2.9.0 through 3.0.2 (or later) are supported.
+This workspace of Rust crates provides language bindings for [libtls]
+only, as the other [LibreSSL] APIs can be used with the existing
+[rust-openssl] crate.  [LibreSSL] versions 2.9.0 through 3.0.2 (or
+later) are supported.
+
+The following crates are included:
+- [libtls-sys]: FFI bindings.
+- [libtls]: Rust bindings.
+- [tokio-libtls]: [Tokio] bindings.
 
 ## Examples
 
@@ -49,14 +55,105 @@ fn tls_server_config() -> error::Result<TlsConfig> {
 }
 ```
 
+A TLS connection:
+
+```rust
+use libtls::config::TlsConfigBuilder;
+use libtls::error;
+use std::io::{Read, Write};
+
+fn sync_https_connect(servername: &str) -> error::Result<()> {
+    let addr = &(servername.to_owned() + ":443");
+
+    let request = format!(
+        "GET / HTTP/1.1\r\n\
+         Host: {}\r\n\
+         Connection: close\r\n\r\n",
+        servername
+    );
+
+    let mut tls = TlsConfigBuilder::new().client()?;
+
+    tls.connect(addr, None)?;
+    tls.write(request.as_bytes())?;
+
+    let mut buf = vec![0u8; 1024];
+    tls.read(&mut buf)?;
+
+    let ok = b"HTTP/1.1 200 OK\r\n";
+    assert_eq!(&buf[..ok.len()], ok);
+
+    Ok(())
+}
+
+fn main() {
+    sync_https_connect("www.example.com").unwrap();
+}
+```
+
+An non-blocking and asynchronous TLS connection using [Tokio] and the
+[tokio-libtls] crate:
+
+```rust
+use futures::Future;
+use libtls::config::TlsConfigBuilder;
+use libtls::error;
+use std::net::ToSocketAddrs;
+use tokio::runtime::Runtime;
+use tokio_io::io::{read_exact, write_all};
+use tokio_libtls::AsyncTls;
+use tokio_tcp::TcpStream;
+
+fn async_https_connect(servername: String) -> error::Result<()> {
+    let addr = &(servername.to_owned() + ":443")
+        .to_socket_addrs()
+        .unwrap()
+        .next()
+        .expect("to_socket_addrs");
+
+    let request = format!(
+        "GET / HTTP/1.1\r\n\
+         Host: {}\r\n\
+         Connection: close\r\n\r\n",
+        servername
+    );
+
+    let config = TlsConfigBuilder::new().build()?;
+
+    let fut = TcpStream::connect(&addr)
+        .and_then(move |tcp| AsyncTls::connect_stream(&servername, tcp, &config))
+        .and_then(move |tls| write_all(tls, request))
+        .and_then(|(tls, _)| {
+            let buf = vec![0u8; 1024];
+            read_exact(tls, buf)
+        });
+
+    let mut runtime = Runtime::new()?;
+    let (_, buf) = runtime.block_on(fut)?;
+
+    let ok = b"HTTP/1.1 200 OK\r\n";
+    assert_eq!(&buf[..ok.len()], ok);
+
+    Ok(())
+}
+
+fn main() {
+    async_https_connect("www.example.com".to_owned()).unwrap();
+}
+```
+
 ## Copyright and license
 
 Licensed under an OpenBSD-ISC-style license, see [LICENSE] for details.
 
-[LibreSSL]: https://www.libressl.org
 [LICENSE]: LICENSE
+[LibreSSL]: https://www.libressl.org
 [OpenSSL]: https://wiki.openssl.org/index.php/Code_Quality
+[Tokio]: https://tokio.rs/
 [libcrypto]: https://man.openbsd.org/crypto.3
 [libssl]: https://man.openbsd.org/ssl.3
+[libtls-sys]: https://crates.io/crates/libtls
+[libtls]: https://crates.io/crates/libtls
 [libtls]: https://man.openbsd.org/tls_init.3
 [rust-openssl]: https://docs.rs/openssl/
+[tokio-libtls]: https://crates.io/crates/tokio-libtls

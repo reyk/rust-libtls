@@ -1,11 +1,11 @@
 [package]
 name = "libtls-sys"
-version = "1.0.0-alpha6"
+version = "1.0.0-alpha7"
 authors = ["Reyk Floeter <contact@reykfloeter.com>"]
 edition = "2018"
 license = "ISC"
 readme = "README.md"
-description = "FFI bindings for LibreSSL's libtls library."
+description = "FFI bindings for LibreSSL's libtls."
 repository = "https://github.com/reyk/rust-libtls"
 categories = ["cryptography", "external-ffi-bindings"]
 keywords = ["libressl", "openbsd"]

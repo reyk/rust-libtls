@@ -201,16 +201,26 @@ pub fn init() -> error::Result<()> {
 
 #[cfg(test)]
 mod test {
-    use super::config::*;
-    use super::*;
+    use super::config::TlsConfigBuilder;
+    use super::error;
     use std::io::{Read, Write};
 
-    fn sync_https_connect() -> error::Result<()> {
-        let mut buf = [0u8; 32];
+    fn sync_https_connect(servername: &str) -> error::Result<()> {
+        let addr = &(servername.to_owned() + ":443");
+
+        let request = format!(
+            "GET / HTTP/1.1\r\n\
+             Host: {}\r\n\
+             Connection: close\r\n\r\n",
+            servername
+        );
 
         let mut tls = TlsConfigBuilder::new().client()?;
-        tls.connect("www.example.com:443", None)?;
-        tls.write(b"GET / HTTP/1.1\r\nHost: www.example.com\r\n\r\n")?;
+
+        tls.connect(addr, None)?;
+        tls.write(request.as_bytes())?;
+
+        let mut buf = vec![0u8; 1024];
         tls.read(&mut buf)?;
 
         let ok = b"HTTP/1.1 200 OK\r\n";
@@ -221,6 +231,6 @@ mod test {
 
     #[test]
     fn test_sync_https_connect() {
-        sync_https_connect().unwrap();
+        sync_https_connect("www.example.com").unwrap();
     }
 }
