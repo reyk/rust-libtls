@@ -97,6 +97,22 @@ use tokio_io::{AsyncRead, AsyncWrite};
 use tokio_reactor::PollEvented;
 use tokio_tcp::TcpStream;
 
+macro_rules! try_async_tls {
+    ($call: expr) => {
+        match $call {
+            Ok(size) => Ok(Async::Ready(size)),
+            Err(err) => {
+                let err: io::Error = err.into();
+                if err.kind() == io::ErrorKind::WouldBlock {
+                    Ok(Async::NotReady)
+                } else {
+                    Err(err)
+                }
+            }
+        }
+    };
+}
+
 /// Wrapper for async I/O operations with `Tls`.
 #[derive(Debug)]
 pub struct TlsStream {
@@ -151,18 +167,7 @@ impl AsyncRead for TlsStream {}
 
 impl AsyncWrite for TlsStream {
     fn shutdown(&mut self) -> Poll<(), io::Error> {
-        match self.tls.close() {
-            Ok(res) => {
-                if res == libtls::TLS_WANT_POLLIN as isize
-                    || res == libtls::TLS_WANT_POLLOUT as isize
-                {
-                    Ok(Async::NotReady)
-                } else {
-                    Ok(Async::Ready(()))
-                }
-            }
-            Err(err) => Err(io::Error::new(io::ErrorKind::Other, err)),
-        }
+        try_async_tls!(self.close())
     }
 }
 
