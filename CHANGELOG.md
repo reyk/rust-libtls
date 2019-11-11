@@ -3,32 +3,35 @@
 All notable changes to this project will be documented in this file.
 
 ## [1.1.0-alpha1] - 2019-11-11
-# Added
+### Added
 - Support for [async-await].
-# Changed
+### Changed
 - Switched to futures 0.3 and tokio-0.2 for [async-await].
 - The [tokio-libtls] crate now requires Rust 1.39 or newer.
 
 ## [1.0.0] - 2019-11-11
-# Added
+### Added
 - This [CHANGELOG].
-# Changed
+### Changed
 - Split `close()` into `tls_close()` and `close()` as the latter
   returns Rust-style `WouldBlock`.
 
 ## [1.0.0-alpha8] - 2019-11-04
 
 ## [1.0.0-alpha7] - 2019-11-04
-# Added
+### Added
 - [tokio-libtls] crate to support async I/O with [tokio].
 
 ## [1.0.0-alpha6] - 2019-11-02
-# Added
+### Added
 - Several changes since the initial import.
 
 [async-await]: https://blog.rust-lang.org/2019/11/07/Async-await-stable.html
 [CHANGELOG]: CHANGELOG.md
 [tokio]: https://tokio.rs/
 [tokio-libtls]: https://crates.io/crates/tokio-libtls
+[1.1.0-alpha1]: https://github.com/reyk/rust-libtls/compare/v1.0.0...v1.1.0-alpha1
+[1.0.0]: https://github.com/reyk/rust-libtls/compare/v1.0.0-alpha8...v1.0.0
+[1.0.0-alpha8]: https://github.com/reyk/rust-libtls/compare/v1.0.0-alpha7...v1.0.0-alpha8
 [1.0.0-alpha7]: https://github.com/reyk/rust-libtls/compare/v1.0.0-alpha6...v1.0.0-alpha7
 [1.0.0-alpha6]: https://github.com/reyk/rust-libtls/compare/fe1583dbea2c7aa086ed53303030b6f719675f8d...v1.0.0-alpha6
