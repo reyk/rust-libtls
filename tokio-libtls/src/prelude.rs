@@ -16,4 +16,4 @@ pub use super::AsyncTls;
 pub use futures::prelude::*;
 pub use libtls::config::TlsConfigBuilder;
 pub use libtls::error;
-pub use tokio_tcp::TcpStream;
+pub use tokio::net::TcpStream;

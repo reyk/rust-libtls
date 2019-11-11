@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.0-alpha1] - 2019-11-11
+# Added
+- Support for [async-await].
+# Changed
+- Switched to futures 0.3 and tokio-0.2 for [async-await].
+- The [tokio-libtls] crate now requires Rust 1.39 or newer.
+
 ## [1.0.0] - 2019-11-11
 # Added
 - This [CHANGELOG].
@@ -19,6 +26,7 @@ All notable changes to this project will be documented in this file.
 # Added
 - Several changes since the initial import.
 
+[async-await]: https://blog.rust-lang.org/2019/11/07/Async-await-stable.html
 [CHANGELOG]: CHANGELOG.md
 [tokio]: https://tokio.rs/
 [tokio-libtls]: https://crates.io/crates/tokio-libtls

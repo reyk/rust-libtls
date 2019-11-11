@@ -21,17 +21,11 @@
 //! # Example
 //!
 //! ```rust
-//! # use std::net::ToSocketAddrs;
-//! # use tokio::runtime::Runtime;
-//! # use tokio::io::{read_exact, write_all};
+//! # use std::io;
+//! # use tokio::io::{AsyncReadExt, AsyncWriteExt};
 //! # use tokio_libtls::prelude::*;
-//! fn async_https_connect(servername: String) -> error::Result<()> {
-//!     let addr = &(servername.to_owned() + ":443")
-//!         .to_socket_addrs()
-//!         .unwrap()
-//!         .next()
-//!         .expect("to_socket_addrs");
-//!
+//! #
+//! async fn async_https_connect(servername: String) -> io::Result<()> {
 //!     let request = format!(
 //!         "GET / HTTP/1.1\r\n\
 //!          Host: {}\r\n\
@@ -40,25 +34,20 @@
 //!     );
 //!
 //!     let config = TlsConfigBuilder::new().build()?;
+//!     let mut tls = AsyncTls::connect(&(servername + ":443"), &config).await?;
+//!     tls.write_all(request.as_bytes()).await?;
 //!
-//!     let fut = TcpStream::connect(&addr)
-//!         .and_then(move |tcp| AsyncTls::connect_stream(&servername, tcp, &config))
-//!         .and_then(move |tls| write_all(tls, request))
-//!         .and_then(|(tls, _)| {
-//!		let buf = vec![0u8; 1024];
-//!             read_exact(tls, buf)
-//!         });
-//!
-//!     let mut runtime = Runtime::new()?;
-//!     let (_, buf) = runtime.block_on(fut)?;
+//!     let mut buf = vec![0u8; 1024];
+//!     tls.read_exact(&mut buf).await?;
 //!
 //!     let ok = b"HTTP/1.1 200 OK\r\n";
 //!     assert_eq!(&buf[..ok.len()], ok);
 //!
 //!     Ok(())
 //! }
-//! # fn main() {
-//! #     async_https_connect("www.example.com".to_owned()).unwrap();
+//! # #[tokio::main]
+//! # async fn main() {
+//! #    async_https_connect("www.example.com".to_owned()).await.unwrap();
 //! # }
 //! ```
 //!
@@ -71,7 +60,6 @@
 )]
 #![warn(missing_docs)]
 
-extern crate futures;
 extern crate libtls;
 extern crate mio;
 
@@ -81,32 +69,34 @@ pub mod error;
 /// A "prelude" for crates using the `tokio-libtls` crate.
 pub mod prelude;
 
-use std::io;
+use std::io::{self, Read, Write};
+use std::net::ToSocketAddrs;
 use std::ops::{Deref, DerefMut};
+use std::pin::Pin;
+use std::task::{Context, Poll};
 
 use error::AsyncTlsError;
-use futures::{task, Async, Future, Poll};
 use libtls::config::TlsConfig;
 use libtls::error::TlsError;
 use libtls::tls::Tls;
 use mio::event::Evented;
 use mio::unix::EventedFd;
 use mio::{PollOpt, Ready, Token};
+use prelude::*;
 use std::os::unix::io::{AsRawFd, RawFd};
-use tokio_io::{AsyncRead, AsyncWrite};
-use tokio_reactor::PollEvented;
-use tokio_tcp::TcpStream;
+use tokio::net::TcpStream;
+use tokio_net::util::PollEvented;
 
 macro_rules! try_async_tls {
     ($call: expr) => {
         match $call {
-            Ok(size) => Ok(Async::Ready(size)),
+            Ok(size) => Poll::Ready(Ok(size)),
             Err(err) => {
                 let err: io::Error = err.into();
                 if err.kind() == io::ErrorKind::WouldBlock {
-                    Ok(Async::NotReady)
+                    Poll::Pending
                 } else {
-                    Err(err)
+                    Poll::Ready(Err(err))
                 }
             }
         }
@@ -163,11 +153,31 @@ impl io::Write for TlsStream {
     }
 }
 
-impl AsyncRead for TlsStream {}
+impl AsyncRead for TlsStream {
+    fn poll_read(
+        mut self: Pin<&mut Self>,
+        _cx: &mut Context,
+        buf: &mut [u8],
+    ) -> Poll<Result<usize, io::Error>> {
+        try_async_tls!(self.tls.read(buf))
+    }
+}
 
 impl AsyncWrite for TlsStream {
-    fn shutdown(&mut self) -> Poll<(), io::Error> {
-        try_async_tls!(self.close())
+    fn poll_write(
+        mut self: Pin<&mut Self>,
+        _cx: &mut Context,
+        buf: &[u8],
+    ) -> Poll<Result<usize, io::Error>> {
+        try_async_tls!(self.tls.write(buf))
+    }
+
+    fn poll_flush(mut self: Pin<&mut Self>, _cx: &mut Context) -> Poll<Result<(), io::Error>> {
+        try_async_tls!(self.tls.close()).map(|_| Ok(()))
+    }
+
+    fn poll_close(mut self: Pin<&mut Self>, _cx: &mut Context) -> Poll<Result<(), io::Error>> {
+        try_async_tls!(self.tls.close()).map(|_| Ok(()))
     }
 }
 
@@ -179,8 +189,7 @@ impl Evented for TlsStream {
         interest: Ready,
         opts: PollOpt,
     ) -> io::Result<()> {
-        let res = EventedFd(&self.as_raw_fd()).register(poll, token, interest, opts);
-        match res {
+        match EventedFd(&self.as_raw_fd()).register(poll, token, interest, opts) {
             Err(ref err) if err.kind() == io::ErrorKind::AlreadyExists => {
                 self.reregister(poll, token, interest, opts)
             }
@@ -214,72 +223,95 @@ pub struct AsyncTls {
 
 impl AsyncTls {
     /// Accept a new async `Tls` connection.
-    pub fn accept_stream(tcp: TcpStream, config: &TlsConfig) -> Self {
-        let tls = Tls::server()
-            .and_then(|mut tls| tls.configure(config).map(|_| tls).map_err(|err| err.into()))
-            .and_then(|mut tls| {
-                tls.accept_raw_fd(&tcp)
-                    .map(|_| tls)
-                    .map_err(|err| err.into())
-            })
-            .map_err(|err| AsyncTlsError::Error(err.into()))
-            .and_then(|tls| {
-                let async_tls = TlsStream::new(tls, tcp);
-                let stream = PollEvented::new(async_tls);
-                Err(AsyncTlsError::Readable(stream))
-            });
+    pub async fn accept_stream(tcp: TcpStream, config: &TlsConfig) -> io::Result<AsyncTlsStream> {
+        let mut tls = Tls::server()?;
+        tls.configure(config)?;
+        tls.accept_raw_fd(&tcp)?;
 
-        Self { inner: Some(tls) }
+        let async_tls = TlsStream::new(tls, tcp);
+        let stream = PollEvented::new(async_tls);
+        let fut = Self {
+            inner: Some(Err(AsyncTlsError::Readable(stream))),
+        };
+
+        let tls = fut.await?;
+
+        Ok(tls)
+    }
+
+    /// Upgrade a TCP stream to a new async `Tls` connection.
+    pub async fn connect_stream(
+        servername: &str,
+        tcp: TcpStream,
+        config: &TlsConfig,
+    ) -> io::Result<AsyncTlsStream> {
+        let mut tls = Tls::client()?;
+        tls.configure(config)?;
+        tls.connect_raw_fd(&tcp, servername)?;
+
+        let async_tls = TlsStream::new(tls, tcp);
+        let stream = PollEvented::new(async_tls);
+        let fut = Self {
+            inner: Some(Err(AsyncTlsError::Readable(stream))),
+        };
+
+        let tls = fut.await?;
+
+        Ok(tls)
     }
 
     /// Connect a new async `Tls` connection.
-    pub fn connect_stream(servername: &str, tcp: TcpStream, config: &TlsConfig) -> Self {
-        let tls = Tls::client()
-            .and_then(|mut tls| tls.configure(config).map(|_| tls).map_err(|err| err.into()))
-            .and_then(|mut tls| {
-                tls.connect_raw_fd(&tcp, servername)
-                    .map(|_| tls)
-                    .map_err(|err| err.into())
-            })
-            .map_err(|err| {
-                eprintln!("connect error: {:?}", err);
-                AsyncTlsError::Error(err.into())
-            })
-            .and_then(|tls| {
-                let async_tls = TlsStream::new(tls, tcp);
-                let stream = PollEvented::new(async_tls);
-                Err(AsyncTlsError::Readable(stream))
-            });
+    pub async fn connect(host: &str, config: &TlsConfig) -> io::Result<AsyncTlsStream> {
+        // Remove _last_ colon (to satisfy the IPv6 form, e.g. [::1]::443).
+        let servername = match host.rfind(':') {
+            None => return Err(io::ErrorKind::InvalidInput.into()),
+            Some(index) => &host[0..index],
+        };
 
-        Self { inner: Some(tls) }
+        let mut last_error = io::ErrorKind::ConnectionRefused.into();
+
+        for addr in host.to_socket_addrs()? {
+            // Return the first TCP successful connection, store the last error.
+            match TcpStream::connect(&addr).await {
+                Ok(tcp) => {
+                    return Self::connect_stream(servername, tcp, config).await;
+                }
+                Err(err) => last_error = err,
+            }
+        }
+
+        Err(last_error)
     }
 }
 
 impl Future for AsyncTls {
-    type Item = AsyncTlsStream;
-    type Error = io::Error;
+    type Output = Result<AsyncTlsStream, io::Error>;
 
-    fn poll(&mut self) -> Poll<AsyncTlsStream, Self::Error> {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
         let inner = self
             .inner
             .take()
             .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "cannot take inner"))?;
         match inner {
             Ok(tls) => {
-                task::current().notify();
-                Ok(Async::Ready(tls))
+                cx.waker().wake_by_ref();
+                Poll::Ready(Ok(tls))
             }
             Err(AsyncTlsError::Readable(stream)) => {
-                stream.poll_read_ready(Ready::readable())?;
-                self.inner = Some(Err(AsyncTlsError::Handshake(stream)));
-                task::current().notify();
-                Ok(Async::NotReady)
+                self.inner = match stream.poll_read_ready(cx, Ready::readable()) {
+                    Poll::Ready(_) => Some(Err(AsyncTlsError::Handshake(stream))),
+                    _ => Some(Err(AsyncTlsError::Handshake(stream))),
+                };
+                cx.waker().wake_by_ref();
+                Poll::Pending
             }
             Err(AsyncTlsError::Writeable(stream)) => {
-                stream.poll_write_ready()?;
-                self.inner = Some(Err(AsyncTlsError::Handshake(stream)));
-                task::current().notify();
-                Ok(Async::NotReady)
+                self.inner = match stream.poll_write_ready(cx) {
+                    Poll::Ready(_) => Some(Err(AsyncTlsError::Handshake(stream))),
+                    _ => Some(Err(AsyncTlsError::Writeable(stream))),
+                };
+                cx.waker().wake_by_ref();
+                Poll::Pending
             }
             Err(AsyncTlsError::Handshake(mut stream)) => {
                 let tls = &mut *stream.get_mut();
@@ -296,12 +328,12 @@ impl Future for AsyncTls {
                     Err(err) => Err(err.into()),
                 };
                 self.inner = Some(res);
-                task::current().notify();
-                Ok(Async::NotReady)
+                cx.waker().wake_by_ref();
+                Poll::Pending
             }
-            Err(AsyncTlsError::Error(TlsError::IoError(err))) => Err(err),
+            Err(AsyncTlsError::Error(TlsError::IoError(err))) => Poll::Ready(Err(err)),
             Err(AsyncTlsError::Error(err)) => {
-                Err(io::Error::new(io::ErrorKind::Other, err.to_string()))
+                Poll::Ready(Err(io::Error::new(io::ErrorKind::Other, err.to_string())))
             }
         }
     }
@@ -310,17 +342,10 @@ impl Future for AsyncTls {
 #[cfg(test)]
 mod test {
     use super::prelude::*;
-    use std::net::ToSocketAddrs;
-    use tokio::runtime::Runtime;
-    use tokio_io::io::{read_exact, write_all};
+    use std::io;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-    fn async_https_connect(servername: String) -> error::Result<()> {
-        let addr = &(servername.to_owned() + ":443")
-            .to_socket_addrs()
-            .unwrap()
-            .next()
-            .expect("to_socket_addrs");
-
+    async fn async_https_connect(servername: String) -> io::Result<()> {
         let request = format!(
             "GET / HTTP/1.1\r\n\
              Host: {}\r\n\
@@ -329,17 +354,11 @@ mod test {
         );
 
         let config = TlsConfigBuilder::new().build()?;
+        let mut tls = AsyncTls::connect(&(servername + ":443"), &config).await?;
+        tls.write_all(request.as_bytes()).await?;
 
-        let fut = TcpStream::connect(&addr)
-            .and_then(move |tcp| AsyncTls::connect_stream(&servername, tcp, &config))
-            .and_then(move |tls| write_all(tls, request))
-            .and_then(|(tls, _)| {
-                let buf = vec![0u8; 1024];
-                read_exact(tls, buf)
-            });
-
-        let mut runtime = Runtime::new()?;
-        let (_, buf) = runtime.block_on(fut)?;
+        let mut buf = vec![0u8; 1024];
+        tls.read_exact(&mut buf).await?;
 
         let ok = b"HTTP/1.1 200 OK\r\n";
         assert_eq!(&buf[..ok.len()], ok);
@@ -347,8 +366,8 @@ mod test {
         Ok(())
     }
 
-    #[test]
-    fn test_async_https_connect() {
-        async_https_connect("www.example.com".to_owned()).unwrap();
+    #[tokio::test]
+    async fn test_async_https_connect() {
+        async_https_connect("www.example.com".to_owned()).await.unwrap();
     }
 }

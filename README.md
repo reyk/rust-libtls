@@ -24,6 +24,12 @@ The following crates are included:
 - [libtls]: Rust bindings.
 - [tokio-libtls]: [Tokio] bindings.
 
+## Minimum Rust version
+
+Async I/O with [tokio-libtls] requires Rust 1.39 or later for
+[async-await].  This crate does not provide any backwards
+compatibility but you can use version `1.0.0` on older Rust versions.
+
 ## Examples
 
 ```rust
@@ -91,22 +97,15 @@ fn main() {
 }
 ```
 
-An non-blocking and asynchronous TLS connection using [Tokio] and the
+A non-blocking and asynchronous TLS connection using [Tokio] and the
 [tokio-libtls] crate:
 
 ```rust
-use std::net::ToSocketAddrs;
-use tokio::runtime::Runtime;
-use tokio::io::{read_exact, write_all};
+use std::io;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio_libtls::prelude::*;
 
-fn async_https_connect(servername: String) -> error::Result<()> {
-    let addr = &(servername.to_owned() + ":443")
-        .to_socket_addrs()
-        .unwrap()
-        .next()
-        .expect("to_socket_addrs");
-
+async fn async_https_connect(servername: String) -> io::Result<()> {
     let request = format!(
         "GET / HTTP/1.1\r\n\
          Host: {}\r\n\
@@ -115,17 +114,11 @@ fn async_https_connect(servername: String) -> error::Result<()> {
     );
 
     let config = TlsConfigBuilder::new().build()?;
+    let mut tls = AsyncTls::connect(&(servername + ":443"), &config).await?;
+    tls.write_all(request.as_bytes()).await?;
 
-    let fut = TcpStream::connect(&addr)
-        .and_then(move |tcp| AsyncTls::connect_stream(&servername, tcp, &config))
-        .and_then(move |tls| write_all(tls, request))
-        .and_then(|(tls, _)| {
-            let buf = vec![0u8; 1024];
-            read_exact(tls, buf)
-        });
-
-    let mut runtime = Runtime::new()?;
-    let (_, buf) = runtime.block_on(fut)?;
+    let mut buf = vec![0u8; 1024];
+    tls.read_exact(&mut buf).await?;
 
     let ok = b"HTTP/1.1 200 OK\r\n";
     assert_eq!(&buf[..ok.len()], ok);
@@ -133,8 +126,9 @@ fn async_https_connect(servername: String) -> error::Result<()> {
     Ok(())
 }
 
-fn main() {
-    async_https_connect("www.example.com".to_owned()).unwrap();
+#[tokio::main]
+async fn main() {
+   async_https_connect("www.example.com".to_owned()).await.unwrap();
 }
 ```
 
@@ -142,6 +136,7 @@ fn main() {
 
 Licensed under an OpenBSD-ISC-style license, see [LICENSE] for details.
 
+[async-await]: https://blog.rust-lang.org/2019/11/07/Async-await-stable.html
 [LICENSE]: LICENSE
 [LibreSSL]: https://www.libressl.org
 [OpenSSL]: https://wiki.openssl.org/index.php/Code_Quality
