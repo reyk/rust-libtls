@@ -165,6 +165,21 @@ impl Tls {
         cvt(self, unsafe { libtls_sys::tls_configure(self.0, config.0) })
     }
 
+    /// Wrap a raw C `tls` object.
+    /// 
+    /// # Safety
+    /// 
+    /// This function assumes that the raw pointer is valid, and takes
+    /// ownership of the libtls object.
+    /// Do not call `tls_free` yourself, since the `drop` destructor will
+    /// take care of it.
+    pub unsafe fn from_sys(tls: *mut libtls_sys::tls) -> Self {
+        if tls.is_null() {
+            panic!(io::Error::last_os_error())
+        }
+        Tls(tls, -1)
+    }
+
     /// Reset the TLS connection.
     ///
     /// A TLS context can be `reset`, allowing for it to be reused.
@@ -883,15 +898,6 @@ impl LastError for Tls {
 
     fn to_error<T>(errstr: String) -> error::Result<T> {
         Err(error::TlsError::CtxError(errstr))
-    }
-}
-
-impl From<*mut libtls_sys::tls> for Tls {
-    fn from(tls: *mut libtls_sys::tls) -> Self {
-        if tls.is_null() {
-            panic!(io::Error::last_os_error())
-        }
-        Tls(tls, -1)
     }
 }
 
