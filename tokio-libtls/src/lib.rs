@@ -368,6 +368,8 @@ mod test {
 
     #[tokio::test]
     async fn test_async_https_connect() {
-        async_https_connect("www.example.com".to_owned()).await.unwrap();
+        async_https_connect("www.example.com".to_owned())
+            .await
+            .unwrap();
     }
 }

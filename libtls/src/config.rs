@@ -135,6 +135,25 @@ impl TlsConfig {
         }
     }
 
+    /// Wrap a raw C `tls_config` object.
+    ///
+    /// # Safety
+    ///
+    /// This function assumes that the raw pointer is valid, and takes
+    /// ownership of the libtls object.
+    /// Do not call `tls_free` yourself, since the `drop` destructor will
+    /// take care of it.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `config` is a null pointer.
+    pub unsafe fn from_sys(config: *mut libtls_sys::tls_config) -> Self {
+        if config.is_null() {
+            panic!(io::Error::last_os_error())
+        }
+        TlsConfig(config)
+    }
+
     /// Add additional files of a public and private key pair.
     ///
     /// The `add_keypair_file` method adds an additional public certificate, and
@@ -998,15 +1017,6 @@ impl error::LastError for TlsConfig {
 
     fn to_error<T>(errstr: String) -> error::Result<T> {
         Err(error::TlsError::ConfigError(errstr))
-    }
-}
-
-impl From<*mut libtls_sys::tls_config> for TlsConfig {
-    fn from(config: *mut libtls_sys::tls_config) -> Self {
-        if config.is_null() {
-            panic!(io::Error::last_os_error())
-        }
-        TlsConfig(config)
     }
 }
 
