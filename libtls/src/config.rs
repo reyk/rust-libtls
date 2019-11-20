@@ -136,13 +136,17 @@ impl TlsConfig {
     }
 
     /// Wrap a raw C `tls_config` object.
-    /// 
+    ///
     /// # Safety
-    /// 
+    ///
     /// This function assumes that the raw pointer is valid, and takes
     /// ownership of the libtls object.
     /// Do not call `tls_free` yourself, since the `drop` destructor will
     /// take care of it.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `config` is a null pointer.
     pub unsafe fn from_sys(config: *mut libtls_sys::tls_config) -> Self {
         if config.is_null() {
             panic!(io::Error::last_os_error())

@@ -166,13 +166,17 @@ impl Tls {
     }
 
     /// Wrap a raw C `tls` object.
-    /// 
+    ///
     /// # Safety
-    /// 
+    ///
     /// This function assumes that the raw pointer is valid, and takes
     /// ownership of the libtls object.
     /// Do not call `tls_free` yourself, since the `drop` destructor will
     /// take care of it.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `tls` is a null pointer.
     pub unsafe fn from_sys(tls: *mut libtls_sys::tls) -> Self {
         if tls.is_null() {
             panic!(io::Error::last_os_error())
@@ -207,7 +211,7 @@ impl Tls {
                 self,
                 libtls_sys::tls_accept_fds(self.0, &mut cctx, fd_read, fd_write),
             )?;
-            Ok(cctx.into())
+            Ok(Self::from_sys(cctx))
         }
     }
 
@@ -231,7 +235,7 @@ impl Tls {
                 libtls_sys::tls_accept_socket(self.0, &mut cctx, socket),
             )?;
             self.1 = socket;
-            Ok(cctx.into())
+            Ok(Self::from_sys(cctx))
         }
     }
 
@@ -278,7 +282,7 @@ impl Tls {
             self,
             libtls_sys::tls_accept_cbs(self.0, &mut cctx, read_cb, write_cb, cb_arg),
         )?;
-        Ok(cctx.into())
+        Ok(Self::from_sys(cctx))
     }
 
     /// Initiate a new TLS connection.
