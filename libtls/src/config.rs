@@ -42,8 +42,7 @@
 //! # Example
 //!
 //! ```
-//! use libtls::config::{self, TlsConfig};
-//! use libtls::error;
+//! use libtls::{config::{self, TlsConfig}, error};
 //!
 //! fn tls_server_config() -> error::Result<TlsConfig> {
 //!     let mut tls_config = TlsConfig::new()?;
@@ -73,16 +72,15 @@
 //! [`Tls`]: ../tls/struct.Tls.html
 //! [`TlsConfig`]: struct.TlsConfig.html
 
-use std::collections::HashMap;
-use std::ffi::{CStr, CString};
-use std::io;
-use std::marker::{Send, Sync};
-use std::os::unix::io::RawFd;
-use std::path::{Path, PathBuf};
-
-use super::error;
-use super::tls::Tls;
-use super::util::*;
+use crate::{error, tls::Tls, util::*};
+use std::{
+    collections::HashMap,
+    ffi::{CStr, CString},
+    io,
+    marker::{Send, Sync},
+    os::unix::io::RawFd,
+    path::{Path, PathBuf},
+};
 
 /// The TLS configuration context for [`Tls`] connections.
 ///
@@ -111,8 +109,7 @@ impl TlsConfig {
     /// # Example
     ///
     /// ```
-    /// # use libtls::config::TlsConfig;
-    /// # use libtls::error::Result;
+    /// # use libtls::{config::TlsConfig, error::Result};
     /// # fn tls_config() -> Result<()> {
     /// let config = TlsConfig::new()?;
     /// #     Ok(())
@@ -163,8 +160,7 @@ impl TlsConfig {
     /// # Example
     ///
     /// ```
-    /// # use libtls::config::TlsConfig;
-    /// # use libtls::error::Result;
+    /// # use libtls::{config::TlsConfig, error::Result};
     /// # fn tls_config() -> Result<()> {
     /// let mut config = TlsConfig::new()?;
     /// assert!(config.add_keypair_file("does_not_exist.crt", "does_not_exist.key").is_err());
@@ -198,8 +194,7 @@ impl TlsConfig {
     /// # Example
     ///
     /// ```
-    /// # use libtls::config::TlsConfig;
-    /// # use libtls::error::Result;
+    /// # use libtls::{config::TlsConfig, error::Result};
     /// # fn tls_config() -> Result<()> {
     /// let mut config = TlsConfig::new()?;
     /// let valid_cert = include_bytes!("../tests/eccert.crt");
@@ -288,8 +283,7 @@ impl TlsConfig {
     /// # Example
     ///
     /// ```
-    /// # use libtls::config::TlsConfig;
-    /// # use libtls::error::Result;
+    /// # use libtls::{config::TlsConfig, error::Result};
     /// # fn tls_config() -> Result<()> {
     /// let mut config = TlsConfig::new()?;
     ///
@@ -421,8 +415,7 @@ impl TlsConfig {
     /// # Example
     ///
     /// ```
-    /// # use libtls::config::TlsConfig;
-    /// # use libtls::error::Result;
+    /// # use libtls::{config::TlsConfig, error::Result};
     /// # fn tls_config() -> Result<()> {
     /// let mut config = TlsConfig::new()?;
     ///
@@ -487,8 +480,7 @@ impl TlsConfig {
     /// # Example
     ///
     /// ```
-    /// # use libtls::config::TlsConfig;
-    /// # use libtls::error::Result;
+    /// # use libtls::{config::TlsConfig, error::Result};
     /// # fn tls_config() -> Result<()> {
     /// let mut config = TlsConfig::new()?;
     /// config.set_dheparams("auto")?;
@@ -525,8 +517,7 @@ impl TlsConfig {
     /// # Example
     ///
     /// ```
-    /// # use libtls::config::TlsConfig;
-    /// # use libtls::error::Result;
+    /// # use libtls::{config::TlsConfig, error::Result};
     /// # fn tls_config() -> Result<()> {
     /// let mut config = TlsConfig::new()?;
     /// config.set_ecdhecurves("X25519,P-384")?;
@@ -726,8 +717,7 @@ impl TlsConfig {
     /// # Example
     ///
     /// ```
-    /// # use libtls::config::{self, TlsConfig};
-    /// # use libtls::error::Result;
+    /// # use libtls::{config::{self, TlsConfig}, error::Result};
     /// # fn tls_config() -> Result<()> {
     /// let mut config = TlsConfig::new()?;
     /// let protocols = config::parse_protocols("tlsv1.1,tlsv1.2")?;
@@ -922,9 +912,7 @@ impl TlsConfig {
     /// # Example
     ///
     /// ```
-    /// # use libtls::*;
-    /// # use libtls::error::Result;
-    /// # use libtls::config::TlsConfig;
+    /// # use libtls::{config::TlsConfig, error::Result, *};
     /// # use rand::{thread_rng, Rng};
     /// # fn tls_config() -> Result<()> {
     /// let mut session_id = [0; TLS_MAX_SESSION_ID_LENGTH as usize];
@@ -975,9 +963,7 @@ impl TlsConfig {
     /// # Example
     ///
     /// ```
-    /// # use libtls::*;
-    /// # use libtls::error::Result;
-    /// # use libtls::config::TlsConfig;
+    /// # use libtls::{config::TlsConfig, error::Result, *};
     /// # use rand::{thread_rng, Rng};
     /// # fn tls_config() -> Result<()> {
     /// let mut key = [0; TLS_TICKET_KEY_SIZE as usize];
@@ -1075,9 +1061,7 @@ pub fn default_ca_cert_file() -> PathBuf {
 /// # Example
 ///
 /// ```
-/// # use libtls::*;
-/// # use libtls::config;
-/// # use libtls::error::Result;
+/// # use libtls::{config::TlsConfig, error::Result, *};
 /// # fn tls_config() -> Result<()> {
 /// // Parse a list of allowed protocols:
 /// let protocols = config::parse_protocols("tlsv1.1,tlsv1.2").unwrap();
@@ -1119,8 +1103,7 @@ pub fn parse_protocols(protostr: &str) -> error::Result<u32> {
 /// # Example
 ///
 /// ```
-/// # use libtls::config;
-/// # use libtls::error::Result;
+/// # use libtls::{config, error::Result};
 /// # fn tls_config() -> Result<()> {
 /// # let filename = file!();
 /// let data = config::load_file(filename, None)?;
@@ -1201,8 +1184,7 @@ enum KeyData {
 /// # Example
 ///
 /// ```
-/// # use libtls::config::TlsConfigBuilder;
-/// # use libtls::error::Result;
+/// # use libtls::{config::TlsConfigBuilder, error::Result};
 /// # use libtls_sys::*;
 /// # fn tls_config() -> Result<()> {
 /// #     let key = include_bytes!("../tests/eccert.key");

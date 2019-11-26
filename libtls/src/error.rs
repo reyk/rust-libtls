@@ -12,11 +12,7 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-use std::error;
-use std::ffi;
-use std::fmt;
-use std::io;
-use std::num;
+use std::{error, ffi, fmt, io, num};
 
 /// An error returned by [`Tls`] and [`TlsConfig`] methods.
 ///

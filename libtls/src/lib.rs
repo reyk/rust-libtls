@@ -15,8 +15,7 @@
 //! # Examples
 //!
 //! ```rust
-//! use libtls::config::TlsConfig;
-//! use libtls::error;
+//! use libtls::{config::TlsConfig, error};
 //!
 //! fn tls_server_config() -> error::Result<TlsConfig> {
 //!     let mut tls_config = TlsConfig::new()?;
@@ -35,8 +34,7 @@
 //! builder pattern:
 //!
 //! ```rust
-//! # use libtls::config::{TlsConfig, TlsConfigBuilder};
-//! # use libtls::error;
+//! # use libtls::{config::{TlsConfig, TlsConfigBuilder}, error};
 //! fn tls_server_config() -> error::Result<TlsConfig> {
 //!     let tls_config = TlsConfigBuilder::new()
 //!         .keypair_file("tests/eccert.crt", "tests/eccert.key", None)
@@ -98,8 +96,6 @@
     html_favicon_url = "https://www.libressl.org/favicon.ico"
 )]
 #![warn(missing_docs)]
-
-extern crate libtls_sys;
 
 ///
 /// TLS configuration for connections.
@@ -201,8 +197,7 @@ pub fn init() -> error::Result<()> {
 
 #[cfg(test)]
 mod test {
-    use super::config::TlsConfigBuilder;
-    use super::error;
+    use crate::{config::TlsConfigBuilder, error};
     use std::io::{Read, Write};
 
     fn sync_https_connect(servername: &str) -> error::Result<()> {

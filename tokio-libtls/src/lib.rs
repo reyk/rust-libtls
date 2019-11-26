@@ -34,7 +34,7 @@
 //!     );
 //!
 //!     let config = TlsConfigBuilder::new().build()?;
-//!     let mut tls = AsyncTls::connect(&(servername + ":443"), &config).await?;
+//!     let mut tls = AsyncTls::connect(&(servername + ":443"), &config, None).await?;
 //!     tls.write_all(request.as_bytes()).await?;
 //!
 //!     let mut buf = vec![0u8; 1024];
@@ -60,31 +60,26 @@
 )]
 #![warn(missing_docs)]
 
-extern crate libtls;
-extern crate mio;
-
 /// Error handling.
 pub mod error;
 
 /// A "prelude" for crates using the `tokio-libtls` crate.
 pub mod prelude;
 
-use std::io::{self, Read, Write};
-use std::net::ToSocketAddrs;
-use std::ops::{Deref, DerefMut};
-use std::pin::Pin;
-use std::task::{Context, Poll};
-
 use error::AsyncTlsError;
-use libtls::config::TlsConfig;
-use libtls::error::TlsError;
-use libtls::tls::Tls;
-use mio::event::Evented;
-use mio::unix::EventedFd;
-use mio::{PollOpt, Ready, Token};
+use libtls::{config::TlsConfig, error::TlsError, tls::Tls};
+use mio::{event::Evented, unix::EventedFd, PollOpt, Ready, Token};
 use prelude::*;
-use std::os::unix::io::{AsRawFd, RawFd};
-use tokio::net::TcpStream;
+use std::{
+    io::{self, Read, Write},
+    net::ToSocketAddrs,
+    ops::{Deref, DerefMut},
+    os::unix::io::{AsRawFd, RawFd},
+    pin::Pin,
+    task::{Context, Poll},
+    time::Duration,
+};
+use tokio::{net::TcpStream, timer::Timeout};
 use tokio_net::util::PollEvented;
 
 macro_rules! try_async_tls {
@@ -223,7 +218,13 @@ pub struct AsyncTls {
 
 impl AsyncTls {
     /// Accept a new async `Tls` connection.
-    pub async fn accept_stream(tcp: TcpStream, config: &TlsConfig) -> io::Result<AsyncTlsStream> {
+    pub async fn accept_stream(
+        tcp: TcpStream,
+        config: &TlsConfig,
+        options: Option<AsyncTlsOptions>,
+    ) -> io::Result<AsyncTlsStream> {
+        let options = options.unwrap_or_else(|| AsyncTlsOptions::new());
+
         let mut tls = Tls::server()?;
         tls.configure(config)?;
         tls.accept_raw_fd(&tcp)?;
@@ -234,20 +235,34 @@ impl AsyncTls {
             inner: Some(Err(AsyncTlsError::Readable(stream))),
         };
 
-        let tls = fut.await?;
+        // Accept with an optional timeout for the TLS handshake.
+        let tls = match options.timeout {
+            Some(timeout) => match Timeout::new(fut, timeout).await {
+                Ok(res) => res,
+                Err(err) => Err(err.into()),
+            },
+            None => fut.await,
+        }?;
 
         Ok(tls)
     }
 
     /// Upgrade a TCP stream to a new async `Tls` connection.
     pub async fn connect_stream(
-        servername: &str,
         tcp: TcpStream,
         config: &TlsConfig,
+        options: Option<AsyncTlsOptions>,
     ) -> io::Result<AsyncTlsStream> {
+        let options = options.unwrap_or_else(|| AsyncTlsOptions::new());
+        let servername = match options.servername {
+            Some(name) => name,
+            None => tcp.peer_addr()?.to_string(),
+        };
+
         let mut tls = Tls::client()?;
+
         tls.configure(config)?;
-        tls.connect_raw_fd(&tcp, servername)?;
+        tls.connect_raw_fd(&tcp, &servername)?;
 
         let async_tls = TlsStream::new(tls, tcp);
         let stream = PollEvented::new(async_tls);
@@ -255,26 +270,50 @@ impl AsyncTls {
             inner: Some(Err(AsyncTlsError::Readable(stream))),
         };
 
-        let tls = fut.await?;
+        // Connect with an optional timeout for the TLS handshake.
+        let tls = match options.timeout {
+            Some(timeout) => match Timeout::new(fut, timeout).await {
+                Ok(res) => res,
+                Err(err) => Err(err.into()),
+            },
+            None => fut.await,
+        }?;
 
         Ok(tls)
     }
 
     /// Connect a new async `Tls` connection.
-    pub async fn connect(host: &str, config: &TlsConfig) -> io::Result<AsyncTlsStream> {
+    pub async fn connect(
+        host: &str,
+        config: &TlsConfig,
+        options: Option<AsyncTlsOptions>,
+    ) -> io::Result<AsyncTlsStream> {
+        let mut options = options.unwrap_or_else(|| AsyncTlsOptions::new());
+
         // Remove _last_ colon (to satisfy the IPv6 form, e.g. [::1]::443).
-        let servername = match host.rfind(':') {
-            None => return Err(io::ErrorKind::InvalidInput.into()),
-            Some(index) => &host[0..index],
+        if let None = options.servername {
+            match host.rfind(':') {
+                None => return Err(io::ErrorKind::InvalidInput.into()),
+                Some(index) => options.servername(&host[0..index]),
+            };
         };
 
         let mut last_error = io::ErrorKind::ConnectionRefused.into();
 
         for addr in host.to_socket_addrs()? {
+            // Connect with an optional timeout.
+            let res = match options.timeout {
+                Some(timeout) => match Timeout::new(TcpStream::connect(&addr), timeout).await {
+                    Ok(res) => res,
+                    Err(err) => Err(err.into()),
+                },
+                None => TcpStream::connect(&addr).await,
+            };
+
             // Return the first TCP successful connection, store the last error.
-            match TcpStream::connect(&addr).await {
+            match res {
                 Ok(tcp) => {
-                    return Self::connect_stream(servername, tcp, config).await;
+                    return Self::connect_stream(tcp, config, Some(options)).await;
                 }
                 Err(err) => last_error = err,
             }
@@ -339,10 +378,55 @@ impl Future for AsyncTls {
     }
 }
 
+/// Configuration options for `AsyncTls`.
+///
+/// # See also
+///
+/// [`AsyncTls`]
+///
+/// [`AsyncTls`]: ./struct.AsyncTls.html
+#[derive(Clone, Default, Debug, PartialEq)]
+pub struct AsyncTlsOptions {
+    timeout: Option<Duration>,
+    servername: Option<String>,
+}
+
+impl AsyncTlsOptions {
+    /// Return new empty `AsyncTlsOptions` struct.
+    pub fn new() -> Self {
+        Self {
+            ..Default::default()
+        }
+    }
+
+    /// Set the optional TCP connection and TLS handshake timeout.
+    pub fn timeout(&'_ mut self, timeout: Duration) -> &'_ mut Self {
+        self.timeout = Some(timeout);
+        self
+    }
+
+    /// Set the optional TLS servername.
+    ///
+    /// If not specified, the address is derived from the host or address.
+    pub fn servername(&'_ mut self, servername: &str) -> &'_ mut Self {
+        self.servername = Some(servername.to_owned());
+        self
+    }
+
+    /// Return as `Some(AsyncTlsOptions)` or `None` if the options are empty.
+    pub fn build(&'_ mut self) -> Option<Self> {
+        if self == &mut Self::new() {
+            None
+        } else {
+            Some(self.clone())
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
-    use super::prelude::*;
-    use std::io;
+    use crate::prelude::*;
+    use std::{io, time::Duration};
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
     async fn async_https_connect(servername: String) -> io::Result<()> {
@@ -354,7 +438,11 @@ mod test {
         );
 
         let config = TlsConfigBuilder::new().build()?;
-        let mut tls = AsyncTls::connect(&(servername + ":443"), &config).await?;
+        let options = AsyncTlsOptions::new()
+            .servername(&servername)
+            .timeout(Duration::from_secs(60))
+            .build();
+        let mut tls = AsyncTls::connect(&(servername + ":443"), &config, options).await?;
         tls.write_all(request.as_bytes()).await?;
 
         let mut buf = vec![0u8; 1024];

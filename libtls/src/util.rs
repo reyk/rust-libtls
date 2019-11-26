@@ -12,17 +12,19 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-use std::convert::TryInto;
-use std::ffi::{CStr, CString};
-use std::io;
-use std::os::raw::{c_char, c_int};
-use std::path::Path;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
-
+use crate::{
+    config::TlsConfig,
+    error::{LastError, Result, TlsError},
+};
 use libtls_sys::time_t;
-
-use super::config::TlsConfig;
-use super::error::{LastError, Result, TlsError};
+use std::{
+    convert::TryInto,
+    ffi::{CStr, CString},
+    io,
+    os::raw::{c_char, c_int},
+    path::Path,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
 
 /// XXX Convert functions into macros.
 

@@ -33,8 +33,7 @@ compatibility but you can use version `1.0.0` on older Rust versions.
 ## Examples
 
 ```rust
-use libtls::config::{self, TlsConfig};
-use libtls::error;
+use libtls::{config::{self, TlsConfig}, error};
 
 fn tls_server_config() -> error::Result<TlsConfig> {
     let mut tls_config = TlsConfig::new()?;
@@ -64,8 +63,7 @@ fn tls_server_config() -> error::Result<TlsConfig> {
 A TLS connection:
 
 ```rust
-use libtls::config::TlsConfigBuilder;
-use libtls::error;
+use libtls::{config::TlsConfigBuilder, error};
 use std::io::{Read, Write};
 
 fn sync_https_connect(servername: &str) -> error::Result<()> {

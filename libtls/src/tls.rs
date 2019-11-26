@@ -42,17 +42,20 @@
 //! [`Tls`]: struct.Tls.html
 //! [`TlsConfig`]: ../config/struct.TlsConfig.html
 
-use std::ffi::{CStr, CString};
-use std::io;
-use std::net::ToSocketAddrs;
-use std::os::raw::c_void;
-use std::os::unix::io::{AsRawFd, RawFd};
-use std::slice;
-use std::time::SystemTime;
-
-use super::config::TlsConfig;
-use super::error::{LastError, Result};
-use super::*;
+use crate::{
+    config::TlsConfig,
+    error::{LastError, Result},
+    *,
+};
+use std::{
+    ffi::{CStr, CString},
+    io,
+    net::ToSocketAddrs,
+    os::raw::c_void,
+    os::unix::io::{AsRawFd, RawFd},
+    slice,
+    time::SystemTime,
+};
 
 /// Convert return value of `Tls` I/O functions into `io::Error`.
 ///

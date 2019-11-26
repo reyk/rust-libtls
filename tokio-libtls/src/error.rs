@@ -12,13 +12,9 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
+use crate::AsyncTlsStream;
 use libtls::error::TlsError;
-
-use std::error;
-use std::fmt;
-use std::io;
-
-use super::AsyncTlsStream;
+use std::{error, fmt, io};
 
 /// An error returned by [`AsyncTls`].
 ///

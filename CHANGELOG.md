@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.0-alpha.2] - 2019-11-26
+### Added
+- `AsyncTlsOptions` to [tokio-libtls].
+### Changed
+- The [tokio-libtls] `AsyncTls` functions, using `AsyncTlsOptions`.
+- Version numbering to use the `x.x.x-alpha.x` syntax.
+### Removed
+- The `extern crate` definitions.
+
 ## [1.1.0-alpha1] - 2019-11-11
 ### Added
 - Support for [async-await].

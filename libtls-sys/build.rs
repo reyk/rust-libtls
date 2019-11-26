@@ -12,12 +12,7 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-extern crate bindgen;
-extern crate num_cpus;
-extern crate pkg_config;
-
-use std::env;
-use std::path::PathBuf;
+use std::{env, path::PathBuf};
 
 #[cfg(target_os = "openbsd")]
 fn libressl() -> Vec<String> {
@@ -30,8 +25,7 @@ fn libressl() -> Vec<String> {
 
 #[cfg(not(target_os = "openbsd"))]
 fn libressl() -> Vec<String> {
-    use std::path::Path;
-    use std::process::Command;
+    use std::{path::Path, process::Command};
 
     let libresslsrc = "libressl-portable";
     let libresslver = "v3.0.2";
