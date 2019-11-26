@@ -15,11 +15,10 @@ documentation = "https://reyk.github.io/rust-libtls/tokio_libtls/"
 travis-ci = { repository = "reyk/rust-libtls", branch = "master" }
 
 [dependencies]
-futures = "0.3.1"
+futures = "0.3"
 libtls = { path = "../libtls", version = "1.1.0-alpha.2" }
 mio = "0.6.20"
-tokio = "0.2.0-alpha.6"
-tokio-net = "0.2.0-alpha.6"
+tokio = { version = "0.2", features = ["io-driver", "tcp", "time"] }
 
 [dev-dependencies]
-tokio = "0.2.0-alpha.6"
+tokio = { version = "0.2", features = ["full"] }

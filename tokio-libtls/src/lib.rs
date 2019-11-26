@@ -79,8 +79,7 @@ use std::{
     task::{Context, Poll},
     time::Duration,
 };
-use tokio::{net::TcpStream, timer::Timeout};
-use tokio_net::util::PollEvented;
+use tokio::{io::PollEvented, net::TcpStream, time::timeout};
 
 macro_rules! try_async_tls {
     ($call: expr) => {
@@ -230,14 +229,14 @@ impl AsyncTls {
         tls.accept_raw_fd(&tcp)?;
 
         let async_tls = TlsStream::new(tls, tcp);
-        let stream = PollEvented::new(async_tls);
+        let stream = PollEvented::new(async_tls)?;
         let fut = Self {
             inner: Some(Err(AsyncTlsError::Readable(stream))),
         };
 
         // Accept with an optional timeout for the TLS handshake.
         let tls = match options.timeout {
-            Some(timeout) => match Timeout::new(fut, timeout).await {
+            Some(tm) => match timeout(tm, fut).await {
                 Ok(res) => res,
                 Err(err) => Err(err.into()),
             },
@@ -265,14 +264,14 @@ impl AsyncTls {
         tls.connect_raw_fd(&tcp, &servername)?;
 
         let async_tls = TlsStream::new(tls, tcp);
-        let stream = PollEvented::new(async_tls);
+        let stream = PollEvented::new(async_tls)?;
         let fut = Self {
             inner: Some(Err(AsyncTlsError::Readable(stream))),
         };
 
         // Connect with an optional timeout for the TLS handshake.
         let tls = match options.timeout {
-            Some(timeout) => match Timeout::new(fut, timeout).await {
+            Some(tm) => match timeout(tm, fut).await {
                 Ok(res) => res,
                 Err(err) => Err(err.into()),
             },
@@ -303,7 +302,7 @@ impl AsyncTls {
         for addr in host.to_socket_addrs()? {
             // Connect with an optional timeout.
             let res = match options.timeout {
-                Some(timeout) => match Timeout::new(TcpStream::connect(&addr), timeout).await {
+                Some(tm) => match timeout(tm, TcpStream::connect(&addr)).await {
                     Ok(res) => res,
                     Err(err) => Err(err.into()),
                 },
