@@ -112,7 +112,7 @@ async fn async_https_connect(servername: String) -> io::Result<()> {
     );
 
     let config = TlsConfigBuilder::new().build()?;
-    let mut tls = AsyncTls::connect(&(servername + ":443"), &config).await?;
+    let mut tls = AsyncTls::connect(&(servername + ":443"), &config, None).await?;
     tls.write_all(request.as_bytes()).await?;
 
     let mut buf = vec![0u8; 1024];
