@@ -229,11 +229,6 @@
 <span id="229">229</span>
 <span id="230">230</span>
 <span id="231">231</span>
-<span id="232">232</span>
-<span id="233">233</span>
-<span id="234">234</span>
-<span id="235">235</span>
-<span id="236">236</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Rust bindings for [LibreSSL]&#39;s [libtls] library.</span>
 <span class="doccomment">//!</span>
@@ -252,8 +247,7 @@
 <span class="doccomment">//! # Examples</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ```rust</span>
-<span class="doccomment">//! use libtls::config::TlsConfig;</span>
-<span class="doccomment">//! use libtls::error;</span>
+<span class="doccomment">//! use libtls::{config::TlsConfig, error};</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! fn tls_server_config() -&gt; error::Result&lt;TlsConfig&gt; {</span>
 <span class="doccomment">//!     let mut tls_config = TlsConfig::new()?;</span>
@@ -272,8 +266,7 @@
 <span class="doccomment">//! builder pattern:</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ```rust</span>
-<span class="doccomment">//! # use libtls::config::{TlsConfig, TlsConfigBuilder};</span>
-<span class="doccomment">//! # use libtls::error;</span>
+<span class="doccomment">//! # use libtls::{config::{TlsConfig, TlsConfigBuilder}, error};</span>
 <span class="doccomment">//! fn tls_server_config() -&gt; error::Result&lt;TlsConfig&gt; {</span>
 <span class="doccomment">//!     let tls_config = TlsConfigBuilder::new()</span>
 <span class="doccomment">//!         .keypair_file(&quot;tests/eccert.crt&quot;, &quot;tests/eccert.key&quot;, None)</span>
@@ -335,8 +328,6 @@
     <span class="ident">html_favicon_url</span> <span class="op">=</span> <span class="string">&quot;https://www.libressl.org/favicon.ico&quot;</span>
 )]</span>
 <span class="attribute">#![<span class="ident">warn</span>(<span class="ident">missing_docs</span>)]</span>
-
-<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">libtls_sys</span>;
 
 <span class="doccomment">///</span>
 <span class="doccomment">/// TLS configuration for connections.</span>
@@ -438,8 +429,7 @@
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">test</span> {
-    <span class="kw">use</span> <span class="kw">super</span>::<span class="ident">config</span>::<span class="ident">TlsConfigBuilder</span>;
-    <span class="kw">use</span> <span class="kw">super</span>::<span class="ident">error</span>;
+    <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">config</span>::<span class="ident">TlsConfigBuilder</span>, <span class="ident">error</span>};
     <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>::{<span class="ident">Read</span>, <span class="ident">Write</span>};
 
     <span class="kw">fn</span> <span class="ident">sync_https_connect</span>(<span class="ident">servername</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {

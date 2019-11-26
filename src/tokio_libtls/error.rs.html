@@ -68,10 +68,6 @@
 <span id="68">68</span>
 <span id="69">69</span>
 <span id="70">70</span>
-<span id="71">71</span>
-<span id="72">72</span>
-<span id="73">73</span>
-<span id="74">74</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) 2019 Reyk Floeter &lt;contact@reykfloeter.com&gt;</span>
 <span class="comment">//</span>
@@ -87,13 +83,9 @@
 <span class="comment">// ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF</span>
 <span class="comment">// OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.</span>
 
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">AsyncTlsStream</span>;
 <span class="kw">use</span> <span class="ident">libtls</span>::<span class="ident">error</span>::<span class="ident">TlsError</span>;
-
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">error</span>;
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">fmt</span>;
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>;
-
-<span class="kw">use</span> <span class="kw">super</span>::<span class="ident">AsyncTlsStream</span>;
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">error</span>, <span class="ident">fmt</span>, <span class="ident">io</span>};
 
 <span class="doccomment">/// An error returned by [`AsyncTls`].</span>
 <span class="doccomment">///</span>

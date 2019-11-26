@@ -1651,14 +1651,6 @@
 <span id="1651">1651</span>
 <span id="1652">1652</span>
 <span id="1653">1653</span>
-<span id="1654">1654</span>
-<span id="1655">1655</span>
-<span id="1656">1656</span>
-<span id="1657">1657</span>
-<span id="1658">1658</span>
-<span id="1659">1659</span>
-<span id="1660">1660</span>
-<span id="1661">1661</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) 2019 Reyk Floeter &lt;contact@reykfloeter.com&gt;</span>
 <span class="comment">//</span>
@@ -1704,8 +1696,7 @@
 <span class="doccomment">//! # Example</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ```</span>
-<span class="doccomment">//! use libtls::config::{self, TlsConfig};</span>
-<span class="doccomment">//! use libtls::error;</span>
+<span class="doccomment">//! use libtls::{config::{self, TlsConfig}, error};</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! fn tls_server_config() -&gt; error::Result&lt;TlsConfig&gt; {</span>
 <span class="doccomment">//!     let mut tls_config = TlsConfig::new()?;</span>
@@ -1735,16 +1726,15 @@
 <span class="doccomment">//! [`Tls`]: ../tls/struct.Tls.html</span>
 <span class="doccomment">//! [`TlsConfig`]: struct.TlsConfig.html</span>
 
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">HashMap</span>;
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">ffi</span>::{<span class="ident">CStr</span>, <span class="ident">CString</span>};
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>;
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">marker</span>::{<span class="ident">Send</span>, <span class="ident">Sync</span>};
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">os</span>::<span class="ident">unix</span>::<span class="ident">io</span>::<span class="ident">RawFd</span>;
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">path</span>::{<span class="ident">Path</span>, <span class="ident">PathBuf</span>};
-
-<span class="kw">use</span> <span class="kw">super</span>::<span class="ident">error</span>;
-<span class="kw">use</span> <span class="kw">super</span>::<span class="ident">tls</span>::<span class="ident">Tls</span>;
-<span class="kw">use</span> <span class="kw">super</span>::<span class="ident">util</span>::<span class="kw-2">*</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">error</span>, <span class="ident">tls</span>::<span class="ident">Tls</span>, <span class="ident">util</span>::<span class="kw-2">*</span>};
+<span class="kw">use</span> <span class="ident">std</span>::{
+    <span class="ident">collections</span>::<span class="ident">HashMap</span>,
+    <span class="ident">ffi</span>::{<span class="ident">CStr</span>, <span class="ident">CString</span>},
+    <span class="ident">io</span>,
+    <span class="ident">marker</span>::{<span class="ident">Send</span>, <span class="ident">Sync</span>},
+    <span class="ident">os</span>::<span class="ident">unix</span>::<span class="ident">io</span>::<span class="ident">RawFd</span>,
+    <span class="ident">path</span>::{<span class="ident">Path</span>, <span class="ident">PathBuf</span>},
+};
 
 <span class="doccomment">/// The TLS configuration context for [`Tls`] connections.</span>
 <span class="doccomment">///</span>
@@ -1773,8 +1763,7 @@
     <span class="doccomment">/// # Example</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
-    <span class="doccomment">/// # use libtls::config::TlsConfig;</span>
-    <span class="doccomment">/// # use libtls::error::Result;</span>
+    <span class="doccomment">/// # use libtls::{config::TlsConfig, error::Result};</span>
     <span class="doccomment">/// # fn tls_config() -&gt; Result&lt;()&gt; {</span>
     <span class="doccomment">/// let config = TlsConfig::new()?;</span>
     <span class="doccomment">/// #     Ok(())</span>
@@ -1797,6 +1786,25 @@
         }
     }
 
+    <span class="doccomment">/// Wrap a raw C `tls_config` object.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// # Safety</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// This function assumes that the raw pointer is valid, and takes</span>
+    <span class="doccomment">/// ownership of the libtls object.</span>
+    <span class="doccomment">/// Do not call `tls_free` yourself, since the `drop` destructor will</span>
+    <span class="doccomment">/// take care of it.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// # Panics</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Panics if `config` is a null pointer.</span>
+    <span class="kw">pub</span> <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">from_sys</span>(<span class="ident">config</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">libtls_sys</span>::<span class="ident">tls_config</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="kw">if</span> <span class="ident">config</span>.<span class="ident">is_null</span>() {
+            <span class="macro">panic</span><span class="macro">!</span>(<span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">last_os_error</span>())
+        }
+        <span class="ident">TlsConfig</span>(<span class="ident">config</span>)
+    }
+
     <span class="doccomment">/// Add additional files of a public and private key pair.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// The `add_keypair_file` method adds an additional public certificate, and</span>
@@ -1806,8 +1814,7 @@
     <span class="doccomment">/// # Example</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
-    <span class="doccomment">/// # use libtls::config::TlsConfig;</span>
-    <span class="doccomment">/// # use libtls::error::Result;</span>
+    <span class="doccomment">/// # use libtls::{config::TlsConfig, error::Result};</span>
     <span class="doccomment">/// # fn tls_config() -&gt; Result&lt;()&gt; {</span>
     <span class="doccomment">/// let mut config = TlsConfig::new()?;</span>
     <span class="doccomment">/// assert!(config.add_keypair_file(&quot;does_not_exist.crt&quot;, &quot;does_not_exist.key&quot;).is_err());</span>
@@ -1841,8 +1848,7 @@
     <span class="doccomment">/// # Example</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
-    <span class="doccomment">/// # use libtls::config::TlsConfig;</span>
-    <span class="doccomment">/// # use libtls::error::Result;</span>
+    <span class="doccomment">/// # use libtls::{config::TlsConfig, error::Result};</span>
     <span class="doccomment">/// # fn tls_config() -&gt; Result&lt;()&gt; {</span>
     <span class="doccomment">/// let mut config = TlsConfig::new()?;</span>
     <span class="doccomment">/// let valid_cert = include_bytes!(&quot;../tests/eccert.crt&quot;);</span>
@@ -1931,8 +1937,7 @@
     <span class="doccomment">/// # Example</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
-    <span class="doccomment">/// # use libtls::config::TlsConfig;</span>
-    <span class="doccomment">/// # use libtls::error::Result;</span>
+    <span class="doccomment">/// # use libtls::{config::TlsConfig, error::Result};</span>
     <span class="doccomment">/// # fn tls_config() -&gt; Result&lt;()&gt; {</span>
     <span class="doccomment">/// let mut config = TlsConfig::new()?;</span>
     <span class="doccomment">///</span>
@@ -2064,8 +2069,7 @@
     <span class="doccomment">/// # Example</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
-    <span class="doccomment">/// # use libtls::config::TlsConfig;</span>
-    <span class="doccomment">/// # use libtls::error::Result;</span>
+    <span class="doccomment">/// # use libtls::{config::TlsConfig, error::Result};</span>
     <span class="doccomment">/// # fn tls_config() -&gt; Result&lt;()&gt; {</span>
     <span class="doccomment">/// let mut config = TlsConfig::new()?;</span>
     <span class="doccomment">///</span>
@@ -2130,8 +2134,7 @@
     <span class="doccomment">/// # Example</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
-    <span class="doccomment">/// # use libtls::config::TlsConfig;</span>
-    <span class="doccomment">/// # use libtls::error::Result;</span>
+    <span class="doccomment">/// # use libtls::{config::TlsConfig, error::Result};</span>
     <span class="doccomment">/// # fn tls_config() -&gt; Result&lt;()&gt; {</span>
     <span class="doccomment">/// let mut config = TlsConfig::new()?;</span>
     <span class="doccomment">/// config.set_dheparams(&quot;auto&quot;)?;</span>
@@ -2168,8 +2171,7 @@
     <span class="doccomment">/// # Example</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
-    <span class="doccomment">/// # use libtls::config::TlsConfig;</span>
-    <span class="doccomment">/// # use libtls::error::Result;</span>
+    <span class="doccomment">/// # use libtls::{config::TlsConfig, error::Result};</span>
     <span class="doccomment">/// # fn tls_config() -&gt; Result&lt;()&gt; {</span>
     <span class="doccomment">/// let mut config = TlsConfig::new()?;</span>
     <span class="doccomment">/// config.set_ecdhecurves(&quot;X25519,P-384&quot;)?;</span>
@@ -2369,8 +2371,7 @@
     <span class="doccomment">/// # Example</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
-    <span class="doccomment">/// # use libtls::config::{self, TlsConfig};</span>
-    <span class="doccomment">/// # use libtls::error::Result;</span>
+    <span class="doccomment">/// # use libtls::{config::{self, TlsConfig}, error::Result};</span>
     <span class="doccomment">/// # fn tls_config() -&gt; Result&lt;()&gt; {</span>
     <span class="doccomment">/// let mut config = TlsConfig::new()?;</span>
     <span class="doccomment">/// let protocols = config::parse_protocols(&quot;tlsv1.1,tlsv1.2&quot;)?;</span>
@@ -2565,9 +2566,7 @@
     <span class="doccomment">/// # Example</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
-    <span class="doccomment">/// # use libtls::*;</span>
-    <span class="doccomment">/// # use libtls::error::Result;</span>
-    <span class="doccomment">/// # use libtls::config::TlsConfig;</span>
+    <span class="doccomment">/// # use libtls::{config::TlsConfig, error::Result, *};</span>
     <span class="doccomment">/// # use rand::{thread_rng, Rng};</span>
     <span class="doccomment">/// # fn tls_config() -&gt; Result&lt;()&gt; {</span>
     <span class="doccomment">/// let mut session_id = [0; TLS_MAX_SESSION_ID_LENGTH as usize];</span>
@@ -2618,9 +2617,7 @@
     <span class="doccomment">/// # Example</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
-    <span class="doccomment">/// # use libtls::*;</span>
-    <span class="doccomment">/// # use libtls::error::Result;</span>
-    <span class="doccomment">/// # use libtls::config::TlsConfig;</span>
+    <span class="doccomment">/// # use libtls::{config::TlsConfig, error::Result, *};</span>
     <span class="doccomment">/// # use rand::{thread_rng, Rng};</span>
     <span class="doccomment">/// # fn tls_config() -&gt; Result&lt;()&gt; {</span>
     <span class="doccomment">/// let mut key = [0; TLS_TICKET_KEY_SIZE as usize];</span>
@@ -2660,15 +2657,6 @@
 
     <span class="kw">fn</span> <span class="ident">to_error</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="ident">errstr</span>: <span class="ident">String</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">error</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
         <span class="prelude-val">Err</span>(<span class="ident">error</span>::<span class="ident">TlsError</span>::<span class="ident">ConfigError</span>(<span class="ident">errstr</span>))
-    }
-}
-
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">libtls_sys</span>::<span class="ident">tls_config</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">TlsConfig</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">config</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">libtls_sys</span>::<span class="ident">tls_config</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="kw">if</span> <span class="ident">config</span>.<span class="ident">is_null</span>() {
-            <span class="macro">panic</span><span class="macro">!</span>(<span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">last_os_error</span>())
-        }
-        <span class="ident">TlsConfig</span>(<span class="ident">config</span>)
     }
 }
 
@@ -2727,9 +2715,7 @@
 <span class="doccomment">/// # Example</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// ```</span>
-<span class="doccomment">/// # use libtls::*;</span>
-<span class="doccomment">/// # use libtls::config;</span>
-<span class="doccomment">/// # use libtls::error::Result;</span>
+<span class="doccomment">/// # use libtls::{config::TlsConfig, error::Result, *};</span>
 <span class="doccomment">/// # fn tls_config() -&gt; Result&lt;()&gt; {</span>
 <span class="doccomment">/// // Parse a list of allowed protocols:</span>
 <span class="doccomment">/// let protocols = config::parse_protocols(&quot;tlsv1.1,tlsv1.2&quot;).unwrap();</span>
@@ -2771,8 +2757,7 @@
 <span class="doccomment">/// # Example</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// ```</span>
-<span class="doccomment">/// # use libtls::config;</span>
-<span class="doccomment">/// # use libtls::error::Result;</span>
+<span class="doccomment">/// # use libtls::{config, error::Result};</span>
 <span class="doccomment">/// # fn tls_config() -&gt; Result&lt;()&gt; {</span>
 <span class="doccomment">/// # let filename = file!();</span>
 <span class="doccomment">/// let data = config::load_file(filename, None)?;</span>
@@ -2853,8 +2838,7 @@
 <span class="doccomment">/// # Example</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// ```</span>
-<span class="doccomment">/// # use libtls::config::TlsConfigBuilder;</span>
-<span class="doccomment">/// # use libtls::error::Result;</span>
+<span class="doccomment">/// # use libtls::{config::TlsConfigBuilder, error::Result};</span>
 <span class="doccomment">/// # use libtls_sys::*;</span>
 <span class="doccomment">/// # fn tls_config() -&gt; Result&lt;()&gt; {</span>
 <span class="doccomment">/// #     let key = include_bytes!(&quot;../tests/eccert.key&quot;);</span>

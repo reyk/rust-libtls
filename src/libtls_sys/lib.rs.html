@@ -33,6 +33,8 @@
 <span id="33">33</span>
 <span id="34">34</span>
 <span id="35">35</span>
+<span id="36">36</span>
+<span id="37">37</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) 2019 Reyk Floeter &lt;contact@reykfloeter.com&gt;</span>
 <span class="comment">//</span>
@@ -58,8 +60,10 @@
 
 <span class="macro">include</span><span class="macro">!</span>(<span class="macro">concat</span><span class="macro">!</span>(<span class="macro">env</span><span class="macro">!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/bindings.rs&quot;</span>));
 
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">marker</span>::{<span class="ident">Send</span>, <span class="ident">Sync</span>};
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">os</span>::<span class="ident">raw</span>::<span class="ident">c_int</span>;
+<span class="kw">use</span> <span class="ident">std</span>::{
+    <span class="ident">marker</span>::{<span class="ident">Send</span>, <span class="ident">Sync</span>},
+    <span class="ident">os</span>::<span class="ident">raw</span>::<span class="ident">c_int</span>,
+};
 
 <span class="kw">extern</span> <span class="string">&quot;C&quot;</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">close</span>(<span class="ident">fd</span>: <span class="ident">c_int</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">c_int</span>;

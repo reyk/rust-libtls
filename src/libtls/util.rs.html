@@ -225,6 +225,8 @@
 <span id="225">225</span>
 <span id="226">226</span>
 <span id="227">227</span>
+<span id="228">228</span>
+<span id="229">229</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) 2019 Reyk Floeter &lt;contact@reykfloeter.com&gt;</span>
 <span class="comment">//</span>
@@ -240,17 +242,19 @@
 <span class="comment">// ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF</span>
 <span class="comment">// OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.</span>
 
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">convert</span>::<span class="ident">TryInto</span>;
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">ffi</span>::{<span class="ident">CStr</span>, <span class="ident">CString</span>};
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>;
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">os</span>::<span class="ident">raw</span>::{<span class="ident">c_char</span>, <span class="ident">c_int</span>};
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">path</span>::<span class="ident">Path</span>;
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">time</span>::{<span class="ident">Duration</span>, <span class="ident">SystemTime</span>, <span class="ident">UNIX_EPOCH</span>};
-
+<span class="kw">use</span> <span class="kw">crate</span>::{
+    <span class="ident">config</span>::<span class="ident">TlsConfig</span>,
+    <span class="ident">error</span>::{<span class="ident">LastError</span>, <span class="prelude-ty">Result</span>, <span class="ident">TlsError</span>},
+};
 <span class="kw">use</span> <span class="ident">libtls_sys</span>::<span class="ident">time_t</span>;
-
-<span class="kw">use</span> <span class="kw">super</span>::<span class="ident">config</span>::<span class="ident">TlsConfig</span>;
-<span class="kw">use</span> <span class="kw">super</span>::<span class="ident">error</span>::{<span class="ident">LastError</span>, <span class="prelude-ty">Result</span>, <span class="ident">TlsError</span>};
+<span class="kw">use</span> <span class="ident">std</span>::{
+    <span class="ident">convert</span>::<span class="ident">TryInto</span>,
+    <span class="ident">ffi</span>::{<span class="ident">CStr</span>, <span class="ident">CString</span>},
+    <span class="ident">io</span>,
+    <span class="ident">os</span>::<span class="ident">raw</span>::{<span class="ident">c_char</span>, <span class="ident">c_int</span>},
+    <span class="ident">path</span>::<span class="ident">Path</span>,
+    <span class="ident">time</span>::{<span class="ident">Duration</span>, <span class="ident">SystemTime</span>, <span class="ident">UNIX_EPOCH</span>},
+};
 
 <span class="doccomment">/// XXX Convert functions into macros.</span>
 
