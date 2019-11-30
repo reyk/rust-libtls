@@ -6,7 +6,7 @@ set -x
 [ -z "${LIBRESSL_DIR}" ] && exit 0
 
 # Install ninja for faster builds
-apt-get install apt-get install ninja-build
+apt-get install ninja-build || true
 
 mkdir -p "${LIBRESSL_DIR}"
 cd "${LIBRESSL_DIR}"
