@@ -48,8 +48,8 @@ pub enum TlsError {
 impl fmt::Display for TlsError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            TlsError::CtxError(s) => write!(f, "{}", s),
-            TlsError::ConfigError(s) => write!(f, "{}", s),
+            TlsError::CtxError(s) => write!(f, "tls context: {}", s),
+            TlsError::ConfigError(s) => write!(f, "tls config: {}", s),
             TlsError::IoError(err) => err.fmt(f),
             TlsError::NulError(err) => err.fmt(f),
             TlsError::NoError => write!(f, "no error"),

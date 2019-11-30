@@ -224,11 +224,11 @@ impl AsyncTls {
     ) -> io::Result<AsyncTlsStream> {
         let options = options.unwrap_or_else(|| AsyncTlsOptions::new());
 
-        let mut tls = Tls::server()?;
-        tls.configure(config)?;
-        tls.accept_raw_fd(&tcp)?;
+        let mut server = Tls::server()?;
+        server.configure(config)?;
+        let client = server.accept_raw_fd(&tcp)?;
 
-        let async_tls = TlsStream::new(tls, tcp);
+        let async_tls = TlsStream::new(client, tcp);
         let stream = PollEvented::new(async_tls)?;
         let fut = Self {
             inner: Some(Err(AsyncTlsError::Readable(stream))),

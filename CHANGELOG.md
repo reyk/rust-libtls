@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.0-alpha.3] - 2019-11-30
+### Fixed
+- Fixed `Tls::accept_*` and `AsyncTls::accept_stream` (server)
+### Changed
+- Improved `TlsError` error messages to be a bit more verbose.
+
 ## [1.1.0-alpha.2] - 2019-11-26
 ### Added
 - `AsyncTlsOptions` to [tokio-libtls].
@@ -40,10 +46,10 @@ All notable changes to this project will be documented in this file.
 [CHANGELOG]: CHANGELOG.md
 [tokio]: https://tokio.rs/
 [tokio-libtls]: https://crates.io/crates/tokio-libtls
+[1.1.0-alpha.3]: https://github.com/reyk/rust-libtls/compare/v1.1.0-alpha2..v1.1.0-alpha.3
 [1.1.0-alpha.2]: https://github.com/reyk/rust-libtls/compare/v1.1.0-alpha1..v1.1.0-alpha.2
 [1.1.0-alpha1]: https://github.com/reyk/rust-libtls/compare/v1.0.0...v1.1.0-alpha1
 [1.0.0]: https://github.com/reyk/rust-libtls/compare/v1.0.0-alpha8...v1.0.0
 [1.0.0-alpha8]: https://github.com/reyk/rust-libtls/compare/v1.0.0-alpha7...v1.0.0-alpha8
 [1.0.0-alpha7]: https://github.com/reyk/rust-libtls/compare/v1.0.0-alpha6...v1.0.0-alpha7
 [1.0.0-alpha6]: https://github.com/reyk/rust-libtls/compare/fe1583dbea2c7aa086ed53303030b6f719675f8d...v1.0.0-alpha6
-

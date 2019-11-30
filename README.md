@@ -130,6 +130,33 @@ async fn main() {
 }
 ```
 
+An asynchronous TLS server:
+
+```
+async fn echo_server(cert: &str, key: &str) -> io::Result<()> {
+    let config = TlsConfigBuilder::new()
+        .keypair_file(cert, key, None)
+        .build()?;
+
+    let addr: SocketAddr = "[::1]:7".parse().unwrap();
+    let mut listener = TcpListener::bind(&addr).await?;
+
+    loop {
+        let (tcp, _) = listener.accept().await?;
+        let mut tls = AsyncTls::accept_stream(tcp, &config, None).await?;
+
+        tokio::spawn(async move {
+            loop {
+                let mut buf = vec![0u8; 1024];
+                if !tls.read(&mut buf).await.is_ok() || !tls.write_all(&buf).await.is_ok() {
+                    break;
+                }
+            }
+        });
+    }
+}
+```
+
 ## Copyright and license
 
 Licensed under an OpenBSD-ISC-style license, see [LICENSE] for details.

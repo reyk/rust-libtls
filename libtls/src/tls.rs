@@ -207,15 +207,14 @@ impl Tls {
     ///
     /// [`tls_accept_fds(3)`](https://man.openbsd.org/tls_accept_fds.3)
     pub fn accept_fds(&mut self, fd_read: RawFd, fd_write: RawFd) -> Result<Tls> {
+        let mut tls = Self::client()?;
         unsafe {
-            // XXX Make sure that this pointer handling is correct!
-            let mut cctx: *mut libtls_sys::tls = std::ptr::null_mut();
             cvt(
                 self,
-                libtls_sys::tls_accept_fds(self.0, &mut cctx, fd_read, fd_write),
+                libtls_sys::tls_accept_fds(self.0, &mut tls.0, fd_read, fd_write),
             )?;
-            Ok(Self::from_sys(cctx))
         }
+        Ok(tls)
     }
 
     /// Accept a new TLS connection on a socket.
@@ -230,16 +229,15 @@ impl Tls {
     /// [`accept_io`](#method.accept_io)
     /// [`tls_accept_socket(3)`](https://man.openbsd.org/tls_accept_socket.3)
     pub fn accept_socket(&mut self, socket: RawFd) -> Result<Tls> {
+        let mut tls = Self::client()?;
         unsafe {
-            // XXX Make sure that this pointer handling is correct!
-            let mut cctx: *mut libtls_sys::tls = std::ptr::null_mut();
             cvt(
                 self,
-                libtls_sys::tls_accept_socket(self.0, &mut cctx, socket),
+                libtls_sys::tls_accept_socket(self.0, &mut tls.0, socket),
             )?;
             self.1 = socket;
-            Ok(Self::from_sys(cctx))
         }
+        Ok(tls)
     }
 
     /// Accept a new TLS connection on an established connection.
@@ -278,14 +276,13 @@ impl Tls {
         write_cb: TlsWriteCb,
         cb_arg: Option<*mut c_void>,
     ) -> Result<Tls> {
-        // XXX Make sure that this pointer handling is correct!
-        let mut cctx: *mut libtls_sys::tls = std::ptr::null_mut();
+        let mut tls = Self::client()?;
         let cb_arg = cb_arg.unwrap_or(std::ptr::null_mut());
         cvt(
             self,
-            libtls_sys::tls_accept_cbs(self.0, &mut cctx, read_cb, write_cb, cb_arg),
+            libtls_sys::tls_accept_cbs(self.0, &mut tls.0, read_cb, write_cb, cb_arg),
         )?;
-        Ok(Self::from_sys(cctx))
+        Ok(tls)
     }
 
     /// Initiate a new TLS connection.
