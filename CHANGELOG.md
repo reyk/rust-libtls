@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.0-beta.1] - 2019-11-30
+### Changed
+- Don't export `AsyncRead` and `AsyncWrite` in the prelude.
+- Use `tokio::io::{AsyncRead, AsyncWrite}` instead of the `futures` versions.
+
 ## [1.1.0-alpha.3] - 2019-11-30
 ### Fixed
 - Fixed `Tls::accept_*` and `AsyncTls::accept_stream` (server)
@@ -46,6 +51,7 @@ All notable changes to this project will be documented in this file.
 [CHANGELOG]: CHANGELOG.md
 [tokio]: https://tokio.rs/
 [tokio-libtls]: https://crates.io/crates/tokio-libtls
+[1.1.0-beta.1]: https://github.com/reyk/rust-libtls/compare/v1.1.0-alpha3..v1.1.0-beta.1
 [1.1.0-alpha.3]: https://github.com/reyk/rust-libtls/compare/v1.1.0-alpha2..v1.1.0-alpha.3
 [1.1.0-alpha.2]: https://github.com/reyk/rust-libtls/compare/v1.1.0-alpha1..v1.1.0-alpha.2
 [1.1.0-alpha1]: https://github.com/reyk/rust-libtls/compare/v1.0.0...v1.1.0-alpha1

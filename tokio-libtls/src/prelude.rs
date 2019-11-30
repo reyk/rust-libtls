@@ -13,6 +13,6 @@
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 pub use crate::{AsyncTls, AsyncTlsOptions};
-pub use futures::prelude::*;
+pub use futures::prelude::Future;
 pub use libtls::{config::TlsConfigBuilder, error};
 pub use tokio::net::TcpStream;

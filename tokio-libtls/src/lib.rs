@@ -79,7 +79,11 @@ use std::{
     task::{Context, Poll},
     time::Duration,
 };
-use tokio::{io::PollEvented, net::TcpStream, time::timeout};
+use tokio::{
+    io::{AsyncRead, AsyncWrite, PollEvented},
+    net::TcpStream,
+    time::timeout,
+};
 
 macro_rules! try_async_tls {
     ($call: expr) => {
@@ -170,7 +174,7 @@ impl AsyncWrite for TlsStream {
         try_async_tls!(self.tls.close()).map(|_| Ok(()))
     }
 
-    fn poll_close(mut self: Pin<&mut Self>, _cx: &mut Context) -> Poll<Result<(), io::Error>> {
+    fn poll_shutdown(mut self: Pin<&mut Self>, _cx: &mut Context) -> Poll<Result<(), io::Error>> {
         try_async_tls!(self.tls.close()).map(|_| Ok(()))
     }
 }
