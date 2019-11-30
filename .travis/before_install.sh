@@ -12,11 +12,12 @@ curl -sSf -O "https://cdn.openbsd.org/pub/OpenBSD/LibreSSL/libressl-${LIBRESSL}.
 tar zxf "libressl-${LIBRESSL}.tar.gz"
 cd "libressl-${LIBRESSL}"
 
+export LIBRESSL_ROOT_DIR=${LIBRESSL_DIR}
+
 mkdir build-ninja
 cd build-ninja
-cmake -G"Ninja" --prefix "${LIBRESSL_DIR}" -D LIBRESSL_ROOT_DIR="${LIBRESSL_DIR}" ..
+cmake -G"Ninja" --prefix "${LIBRESSL_DIR}" ..
 ninja
-ninja test
 ninja install
 
 exit 0
