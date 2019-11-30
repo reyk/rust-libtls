@@ -132,7 +132,7 @@ async fn main() {
 
 An asynchronous TLS server:
 
-```
+```rust
 async fn echo_server(cert: &str, key: &str) -> io::Result<()> {
     let config = TlsConfigBuilder::new()
         .keypair_file(cert, key, None)
