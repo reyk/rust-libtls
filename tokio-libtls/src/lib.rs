@@ -211,6 +211,9 @@ impl Evented for TlsStream {
     }
 }
 
+unsafe impl Send for TlsStream {}
+unsafe impl Sync for TlsStream {}
+
 /// Pollable wrapper for async I/O operations with `Tls`.
 pub type AsyncTlsStream = PollEvented<TlsStream>;
 
@@ -380,6 +383,9 @@ impl Future for AsyncTls {
         }
     }
 }
+
+unsafe impl Send for AsyncTls {}
+unsafe impl Sync for AsyncTls {}
 
 /// Configuration options for `AsyncTls`.
 ///
