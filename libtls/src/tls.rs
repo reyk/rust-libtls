@@ -972,7 +972,7 @@ impl io::Write for Tls {
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        try_tls!(self, self.tls_handshake()).map(|_| ())
+        Ok(())
     }
 }
 
