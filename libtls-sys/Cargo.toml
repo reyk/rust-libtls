@@ -12,7 +12,6 @@ keywords = ["libressl", "openbsd"]
 documentation = "https://reyk.github.io/rust-libtls/libtls_sys/"
 links = "libtls"
 build = "build.rs"
-include = "libressl-*.tar.gz"
 
 [badges]
 travis-ci = { repository = "reyk/rust-libtls", branch = "master" }
