@@ -1,10 +1,11 @@
 # Rust bindings for [LibreSSL]'s [libtls].
 
 [![Crates.IO](https://img.shields.io/crates/v/libtls.svg)](https://crates.io/crates/libtls)
+[![docs.rs](https://docs.rs/libtls/badge.svg)](https://docs.rs/libtls)
 [![Build Status](https://travis-ci.org/reyk/rust-libtls.svg?branch=master)](https://travis-ci.org/reyk/rust-libtls)
 [![License](https://img.shields.io/badge/license-ISC-blue.svg)](https://raw.githubusercontent.com/reyk/rust-libtls/master/LICENSE)
 
-[Documentation](https://reyk.github.io/rust-libtls/libtls/).
+[Documentation], [Changelog]
 
 The [LibreSSL] project provides a free TLS and crypto stack that was forked
 from [OpenSSL] in 2014.  The goals are to provide a modernized codebase,
@@ -161,6 +162,8 @@ async fn echo_server(cert: &str, key: &str) -> io::Result<()> {
 
 Licensed under an OpenBSD-ISC-style license, see [LICENSE] for details.
 
+[Changelog]: CHANGELOG.md
+[Documentation]: https://docs.rs/libtls
 [async-await]: https://blog.rust-lang.org/2019/11/07/Async-await-stable.html
 [LICENSE]: LICENSE
 [LibreSSL]: https://www.libressl.org
