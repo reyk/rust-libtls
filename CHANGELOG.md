@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.0-beta.6] - 2019-12-04
+### Changed
+- Tested several iterations related to `cargo publish` and the `docs.rs` link.
+- No functional change in `1.1.0-beta.3` to `1.1.0-beta.6`.
+
 ## [1.1.0-beta.2] - 2019-11-30
 ### Fixed
 - Flush is a no-up for the `Tls` object
@@ -55,6 +60,7 @@ All notable changes to this project will be documented in this file.
 [CHANGELOG]: CHANGELOG.md
 [tokio]: https://tokio.rs/
 [tokio-libtls]: https://crates.io/crates/tokio-libtls
+[1.1.0-beta.6]: https://github.com/reyk/rust-libtls/compare/v1.1.0-beta.2..v1.1.0-beta.6
 [1.1.0-beta.2]: https://github.com/reyk/rust-libtls/compare/v1.1.0-beta.1..v1.1.0-beta.2
 [1.1.0-beta.1]: https://github.com/reyk/rust-libtls/compare/v1.1.0-alpha.3..v1.1.0-beta.1
 [1.1.0-alpha.3]: https://github.com/reyk/rust-libtls/compare/v1.1.0-alpha.2..v1.1.0-alpha.3
