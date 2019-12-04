@@ -1,6 +1,6 @@
 [package]
 name = "tokio-libtls"
-version = "1.1.0-beta.5"
+version = "1.1.0-beta.6"
 authors = ["Reyk Floeter <contact@reykfloeter.com>"]
 edition = "2018"
 license = "ISC"
@@ -9,14 +9,13 @@ description = "Tokio bindings for LibreSSL's libtls."
 repository = "https://github.com/reyk/rust-libtls"
 categories = ["asynchronous", "cryptography", "network-programming"]
 keywords = ["tokio", "tls", "ssl", "libressl", "openbsd"]
-documentation = "https://reyk.github.io/rust-libtls/tokio_libtls/"
 
 [badges]
 travis-ci = { repository = "reyk/rust-libtls", branch = "master" }
 
 [dependencies]
 futures = "0.3"
-libtls = { path = "../libtls", version = "1.1.0-beta.5" }
+libtls = { path = "../libtls", version = "1.1.0-beta.6" }
 mio = "0.6.20"
 tokio = { version = "0.2", features = ["io-driver", "tcp", "time"] }
 

@@ -1,6 +1,6 @@
 [package]
 name = "libtls"
-version = "1.1.0-beta.5"
+version = "1.1.0-beta.6"
 authors = ["Reyk Floeter <contact@reykfloeter.com>"]
 edition = "2018"
 license = "ISC"
@@ -9,13 +9,12 @@ description = "Rust bindings for LibreSSL's libtls."
 repository = "https://github.com/reyk/rust-libtls"
 categories = ["cryptography", "api-bindings"]
 keywords = ["crypto", "tls", "ssl", "libressl", "openbsd"]
-documentation = "https://reyk.github.io/rust-libtls/libtls/"
 
 [badges]
 travis-ci = { repository = "reyk/rust-libtls", branch = "master" }
 
 [dependencies]
-libtls-sys = { path = "../libtls-sys", version = "1.1.0-beta.5" }
+libtls-sys = { path = "../libtls-sys", version = "1.1.0-beta.6" }
 
 [dev-dependencies]
 rand = "0.7.2"
