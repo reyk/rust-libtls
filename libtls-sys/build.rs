@@ -37,8 +37,8 @@ fn libressl() -> Vec<String> {
     if Path::new(&libressltar).exists() {
         Command::new("tar")
             .args(&[
-                "-s",
-                &format!("/libressl-{}/{}/", &libresslver[1..], libresslsrc),
+                "--xform",
+                &format!("s/^libressl-{}/{}/", &libresslver[1..], libresslsrc),
                 "-C",
                 &outdir,
                 "-zxf",
