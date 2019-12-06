@@ -7,13 +7,15 @@
 
 [Documentation], [Changelog]
 
-The [LibreSSL] project provides a free TLS and crypto stack that was forked
-from [OpenSSL] in 2014.  The goals are to provide a modernized codebase,
-improved security, and to apply best practice development processes.
+The [LibreSSL] project provides a free TLS and crypto stack that was
+forked from [OpenSSL] in 2014.  The goals are to provide a modernized
+codebase, improved security, and to apply best practice development
+processes.
 
-[LibreSSL] provides C APIs that are compatible to [OpenSSL]'s [libssl] and
-[libcrypto] libraries.  It also provides [libtls], a new TLS library that
-is designed to make it easier to write foolproof applications.
+[LibreSSL] provides C APIs that are compatible to [OpenSSL]'s [libssl]
+and [libcrypto] libraries.  It also provides [libtls], a new TLS
+library that is designed to make it easier to write foolproof
+applications.
 
 This workspace of Rust crates provides language bindings for [libtls]
 only, as the other [LibreSSL] APIs can be used with the existing
