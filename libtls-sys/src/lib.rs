@@ -16,9 +16,10 @@
     html_logo_url = "https://www.libressl.org/images/libressl.jpg",
     html_favicon_url = "https://www.libressl.org/favicon.ico"
 )]
-#![allow(non_upper_case_globals)]
+#![allow(clippy::unreadable_literal)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
+#![allow(non_upper_case_globals)]
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 

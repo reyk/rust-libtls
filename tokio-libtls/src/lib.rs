@@ -229,7 +229,7 @@ impl AsyncTls {
         config: &TlsConfig,
         options: Option<AsyncTlsOptions>,
     ) -> io::Result<AsyncTlsStream> {
-        let options = options.unwrap_or_else(|| AsyncTlsOptions::new());
+        let options = options.unwrap_or_else(AsyncTlsOptions::new);
 
         let mut server = Tls::server()?;
         server.configure(config)?;
@@ -259,7 +259,7 @@ impl AsyncTls {
         config: &TlsConfig,
         options: Option<AsyncTlsOptions>,
     ) -> io::Result<AsyncTlsStream> {
-        let options = options.unwrap_or_else(|| AsyncTlsOptions::new());
+        let options = options.unwrap_or_else(AsyncTlsOptions::new);
         let servername = match options.servername {
             Some(name) => name,
             None => tcp.peer_addr()?.to_string(),
@@ -294,10 +294,10 @@ impl AsyncTls {
         config: &TlsConfig,
         options: Option<AsyncTlsOptions>,
     ) -> io::Result<AsyncTlsStream> {
-        let mut options = options.unwrap_or_else(|| AsyncTlsOptions::new());
+        let mut options = options.unwrap_or_else(AsyncTlsOptions::new);
 
         // Remove _last_ colon (to satisfy the IPv6 form, e.g. [::1]::443).
-        if let None = options.servername {
+        if options.servername.is_none() {
             match host.rfind(':') {
                 None => return Err(io::ErrorKind::InvalidInput.into()),
                 Some(index) => options.servername(&host[0..index]),
@@ -403,9 +403,7 @@ pub struct AsyncTlsOptions {
 impl AsyncTlsOptions {
     /// Return new empty `AsyncTlsOptions` struct.
     pub fn new() -> Self {
-        Self {
-            ..Default::default()
-        }
+        Default::default()
     }
 
     /// Set the optional TCP connection and TLS handshake timeout.

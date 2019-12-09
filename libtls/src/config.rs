@@ -1235,9 +1235,7 @@ impl TlsConfigBuilder {
     ///
     /// [`TlsConfig`](struct.TlsConfig.html)
     pub fn new() -> Self {
-        Self {
-            ..Default::default()
-        }
+        Default::default()
     }
 
     /// Build new [`TlsConfig`] object.
