@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 - New `accept`, `accept_stream`, `connect`, and `connect_stream`
   functions in [tokio-libtls].
+- `examples/` directory.
 ### Deprecated
 - `config::TlsConfig` in favour of `config::Config` in [libtls].
 - `config::TlsConfigBuilder` in favour of `config::Builder` in

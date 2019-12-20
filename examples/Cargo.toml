@@ -1,0 +1,33 @@
+[package]
+name = "examples"
+version = "0.0.0"
+authors = ["Reyk Floeter <contact@reykfloeter.com>"]
+license = "ISC"
+publish = false
+edition = "2018"
+
+[dev-dependencies]
+futures = "0.3"
+libtls = { path = "../libtls", version = "1.1.0" }
+tokio-libtls = { path = "../tokio-libtls", version = "1.1.0" }
+tokio = { version = "0.2", features = ["full"] }
+
+[[example]]
+name = "config"
+path = "config.rs"
+
+[[example]]
+name = "config_builder"
+path = "config_builder.rs"
+
+[[example]]
+name = "connect"
+path = "connect.rs"
+
+[[example]]
+name = "connect_async"
+path = "connect_async.rs"
+
+[[example]]
+name = "echo"
+path = "echo.rs"
