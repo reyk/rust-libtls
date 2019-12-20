@@ -122,6 +122,9 @@ fn main() {
     let bindings = bindgen::Builder::default()
         .clang_arg(cflags.join(" "))
         .header("wrapper.h")
+        .whitelist_function("tls_.*")
+        .whitelist_type("tls_.*")
+        .whitelist_var("TLS_.*")
         .generate()
         .expect("Unable to generate libtls bindings");
 
