@@ -37,7 +37,6 @@ compatibility but you can use version `1.0.0` on older Rust versions.
 
 See the [examples] directory for various examples to configure,
 establish, and connect synchronous and asynchronous TLS connections.
-
 The following selected example creates a non-blocking and asynchronous
 TLS connection using [Tokio] and the [tokio-libtls] crate:
 
