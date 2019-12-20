@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.2] - 2019-12-20
+### Changed
+- Use whitelist for libtls bindings.
+
 ## [1.1.1] - 2019-12-20
 ### Added
 - New `accept`, `accept_stream`, `connect`, and `connect_stream`
@@ -51,6 +55,7 @@ All notable changes to this project will be documented in this file.
 [tokio]: https://tokio.rs/
 [libtls]: https://crates.io/crates/libtls
 [tokio-libtls]: https://crates.io/crates/tokio-libtls
+[1.1.2]: https://github.com/reyk/rust-libtls/compare/v1.1.1..v1.1.2
 [1.1.1]: https://github.com/reyk/rust-libtls/compare/v1.1.0..v1.1.1
 [1.1.0]: https://github.com/reyk/rust-libtls/compare/v1.0.0..v1.1.0
 [1.0.0]: https://github.com/reyk/rust-libtls/compare/fe1583dbea2c7aa086ed53303030b6f719675f8d...v1.0.0
