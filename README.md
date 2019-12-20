@@ -35,41 +35,18 @@ compatibility but you can use version `1.0.0` on older Rust versions.
 
 ## Examples
 
-```rust
-use libtls::{config::{self, Config}, error};
+See the [examples] directory for various examples to configure,
+establish, and connect synchronous and asynchronous TLS connections.
 
-fn tls_server_config() -> error::Result<Config> {
-    let mut tls_config = Config::new()?;
-    tls_config.set_keypair_file("tests/eccert.crt", "tests/eccert.key")?;
-    tls_config.set_protocols(libtls_sys::TLS_PROTOCOL_TLSv1_2);
-    Ok(tls_config)
-}
-
-fn main() {
-    let tls_config = tls_server_config().unwrap();
-}
-```
-
-The same configuration can be created using the `config::Builder`
-builder pattern:
+The following selected example creates a non-blocking and asynchronous
+TLS connection using [Tokio] and the [tokio-libtls] crate:
 
 ```rust
-fn tls_server_config() -> error::Result<Config> {
-    let tls_config = config::Builder::new()
-        .keypair_file("tests/eccert.crt", "tests/eccert.key", None)
-        .protocols(libtls_sys::TLS_PROTOCOL_TLSv1_2)
-        .build()?;
-    Ok(tls_config)
-}
-```
+use std::io;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio_libtls::prelude::*;
 
-A TLS connection:
-
-```rust
-use libtls::{config, error};
-use std::io::{Read, Write};
-
-fn sync_https_connect(servername: &str) -> error::Result<()> {
+async fn async_https_connect(servername: &str) -> io::Result<()> {
     let addr = &(servername.to_owned() + ":443");
 
     let request = format!(
@@ -79,43 +56,8 @@ fn sync_https_connect(servername: &str) -> error::Result<()> {
         servername
     );
 
-    let mut tls = config::Builder::new().client()?;
-
-    tls.connect(addr, None)?;
-    tls.write(request.as_bytes())?;
-
-    let mut buf = vec![0u8; 1024];
-    tls.read(&mut buf)?;
-
-    let ok = b"HTTP/1.1 200 OK\r\n";
-    assert_eq!(&buf[..ok.len()], ok);
-
-    Ok(())
-}
-
-fn main() {
-    sync_https_connect("www.example.com").unwrap();
-}
-```
-
-A non-blocking and asynchronous TLS connection using [Tokio] and the
-[tokio-libtls] crate:
-
-```rust
-use std::io;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio_libtls::prelude::*;
-
-async fn async_https_connect(servername: String) -> io::Result<()> {
-    let request = format!(
-        "GET / HTTP/1.1\r\n\
-         Host: {}\r\n\
-         Connection: close\r\n\r\n",
-        servername
-    );
-
     let config = Builder::new().build()?;
-    let mut tls = AsyncTls::connect(&(servername + ":443"), &config, None).await?;
+    let mut tls = connect(addr, &config, None).await?;
     tls.write_all(request.as_bytes()).await?;
 
     let mut buf = vec![0u8; 1024];
@@ -129,35 +71,10 @@ async fn async_https_connect(servername: String) -> io::Result<()> {
 
 #[tokio::main]
 async fn main() {
-   async_https_connect("www.example.com".to_owned()).await.unwrap();
+    async_https_connect("www.example.com").await.unwrap();
 }
 ```
 
-An asynchronous TLS server:
-
-```rust
-async fn echo_server(cert: &str, key: &str) -> io::Result<()> {
-    let config = Builder::new()
-        .keypair_file(cert, key, None)
-        .build()?;
-
-    let addr: SocketAddr = "[::1]:7".parse().unwrap();
-    let mut listener = TcpListener::bind(&addr).await?;
-
-    loop {
-        let mut tls = accept(&mut listener, &config, None).await?;
-
-        tokio::spawn(async move {
-            loop {
-                let mut buf = vec![0u8; 1024];
-                if !tls.read(&mut buf).await.is_ok() || !tls.write_all(&buf).await.is_ok() {
-                    break;
-                }
-            }
-        });
-    }
-}
-```
 
 ## Copyright and license
 
@@ -165,11 +82,12 @@ Licensed under an OpenBSD-ISC-style license, see [LICENSE] for details.
 
 [Changelog]: CHANGELOG.md
 [Documentation]: https://docs.rs/libtls
-[async-await]: https://blog.rust-lang.org/2019/11/07/Async-await-stable.html
 [LICENSE]: LICENSE
 [LibreSSL]: https://www.libressl.org
 [OpenSSL]: https://wiki.openssl.org/index.php/Code_Quality
 [Tokio]: https://tokio.rs/
+[async-await]: https://blog.rust-lang.org/2019/11/07/Async-await-stable.html
+[examples]: https://github.com/reyk/rust-libtls/tree/master/examples
 [libcrypto]: https://man.openbsd.org/crypto.3
 [libssl]: https://man.openbsd.org/ssl.3
 [libtls-sys]: https://crates.io/crates/libtls
