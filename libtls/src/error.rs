@@ -14,15 +14,15 @@
 
 use std::{error, ffi, fmt, io, num};
 
-/// An error returned by [`Tls`] and [`TlsConfig`] methods.
+/// An error returned by [`Tls`] and [`Config`] methods.
 ///
 /// This error includes the detailed error message of a failed `libtls`
 /// operation.
 ///
 /// [`Tls`]: ../tls/struct.Tls.html
-/// [`TlsConfig`]: ../config/struct.TlsConfig.html
+/// [`Config`]: ../config/struct.Config.html
 #[derive(Debug)]
-pub enum TlsError {
+pub enum Error {
     /// [`Tls`](../tls/struct.Tls.html) error.
     ///
     /// # See also
@@ -30,11 +30,11 @@ pub enum TlsError {
     /// [`Tls::last_error`](../tls/struct.Tls.html#method.last_error),
     /// [`tls_error(3)`](https://man.openbsd.org/tls_error.3)
     CtxError(String),
-    /// [`TlsConfig`](../config/struct.TlsConfig.html) error.
+    /// [`Config`](../config/struct.Config.html) error.
     ///
     /// # See also
     ///
-    /// [`TlsConfig::last_error`](../config/struct.TlsConfig.html#method.last_error),
+    /// [`Config::last_error`](../config/struct.Config.html#method.last_error),
     /// [`tls_config_error(3)`](https://man.openbsd.org/tls_config_error.3)
     ConfigError(String),
     /// Generic operating system or I/O error.
@@ -45,58 +45,62 @@ pub enum TlsError {
     NoError,
 }
 
-impl fmt::Display for TlsError {
+/// An error returned by [`Tls`] and [`Config`] methods.
+#[deprecated(since = "1.1.1", note = "Please use `Error` instead of `TlsError`")]
+pub type TlsError = Error;
+
+impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            TlsError::CtxError(s) => write!(f, "tls context: {}", s),
-            TlsError::ConfigError(s) => write!(f, "tls config: {}", s),
-            TlsError::IoError(err) => err.fmt(f),
-            TlsError::NulError(err) => err.fmt(f),
-            TlsError::NoError => write!(f, "no error"),
+            Error::CtxError(s) => write!(f, "tls context: {}", s),
+            Error::ConfigError(s) => write!(f, "tls config: {}", s),
+            Error::IoError(err) => err.fmt(f),
+            Error::NulError(err) => err.fmt(f),
+            Error::NoError => write!(f, "no error"),
         }
     }
 }
 
-impl error::Error for TlsError {
+impl error::Error for Error {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         None
     }
 }
 
-impl From<io::Error> for TlsError {
+impl From<io::Error> for Error {
     fn from(err: io::Error) -> Self {
-        TlsError::IoError(err)
+        Error::IoError(err)
     }
 }
 
-impl From<ffi::NulError> for TlsError {
+impl From<ffi::NulError> for Error {
     fn from(err: ffi::NulError) -> Self {
-        TlsError::NulError(err)
+        Error::NulError(err)
     }
 }
 
-impl From<num::TryFromIntError> for TlsError {
+impl From<num::TryFromIntError> for Error {
     fn from(err: num::TryFromIntError) -> Self {
-        TlsError::IoError(io::Error::new(io::ErrorKind::Other, err))
+        Error::IoError(io::Error::new(io::ErrorKind::Other, err))
     }
 }
 
-impl From<TlsError> for io::Error {
-    fn from(err: TlsError) -> Self {
+impl From<Error> for io::Error {
+    fn from(err: Error) -> Self {
         io::Error::new(io::ErrorKind::Other, err)
     }
 }
 
-/// A result type that is returning a [TlsError](enum.TlsError.html).
-pub type Result<T> = std::result::Result<T, TlsError>;
+/// A result type that is returning a [Error](enum.Error.html).
+pub type Result<T> = std::result::Result<T, Error>;
 
 /// Returns the last API error.
 ///
-/// The [`Tls`] and [`TlsConfig`] structs both provide a way to return
+/// The [`Tls`] and [`Config`] structs both provide a way to return
 /// the last error as a String from the underlying API.
 ///
 /// [`Tls`]: ../tls/struct.Tls.html
-/// [`TlsConfig`]: ../tls/struct.TlsConfig.html
+/// [`Config`]: ../tls/struct.Config.html
 pub trait LastError {
     /// Return the last error of the underlying API.
     ///
@@ -107,6 +111,6 @@ pub trait LastError {
 
     /// Returns the error string as an error object.
     fn to_error<T>(errstr: String) -> Result<T> {
-        Err(TlsError::ConfigError(errstr))
+        Err(Error::ConfigError(errstr))
     }
 }

@@ -13,8 +13,8 @@
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 use crate::{
-    config::TlsConfig,
-    error::{LastError, Result, TlsError},
+    config::Config,
+    error::{Error, LastError, Result},
 };
 use libtls_sys::time_t;
 use std::{
@@ -29,7 +29,7 @@ use std::{
 /// XXX Convert functions into macros.
 
 pub fn call_file1<P: AsRef<Path>>(
-    config: &mut TlsConfig,
+    config: &mut Config,
     file1: (P, &str),
     f: unsafe extern "C" fn(*mut libtls_sys::tls_config, *const c_char) -> c_int,
 ) -> Result<()> {
@@ -44,7 +44,7 @@ pub fn call_file1<P: AsRef<Path>>(
 }
 
 pub fn call_file2<P: AsRef<Path>>(
-    config: &mut TlsConfig,
+    config: &mut Config,
     file1: (P, &str),
     file2: (P, &str),
     f: unsafe extern "C" fn(*mut libtls_sys::tls_config, *const c_char, *const c_char) -> c_int,
@@ -65,7 +65,7 @@ pub fn call_file2<P: AsRef<Path>>(
 }
 
 pub fn call_file3<P: AsRef<Path>>(
-    config: &mut TlsConfig,
+    config: &mut Config,
     file1: (P, &str),
     file2: (P, &str),
     file3: (P, &str),
@@ -105,7 +105,7 @@ pub fn call_file3<P: AsRef<Path>>(
 }
 
 pub fn call_string1(
-    config: &mut TlsConfig,
+    config: &mut Config,
     string1: &str,
     f: unsafe extern "C" fn(*mut libtls_sys::tls_config, *const c_char) -> c_int,
 ) -> Result<()> {
@@ -116,7 +116,7 @@ pub fn call_string1(
 }
 
 pub fn call_arg1<T>(
-    config: &mut TlsConfig,
+    config: &mut Config,
     arg1: T,
     f: unsafe extern "C" fn(*mut libtls_sys::tls_config, T) -> c_int,
 ) -> Result<()> {
@@ -129,7 +129,7 @@ where
 {
     match retval {
         -1 => {
-            // Instead of storing a reference to the error context in TlsError
+            // Instead of storing a reference to the error context in Error
             // (by storing the *mut tls* to call tls_*error() later),
             // we store the actual error as a String.  This needs a bit more
             // memory but it is safe to transfer the error between threads and
@@ -215,7 +215,7 @@ where
 /// [`cvt_string`]: fn.cvt_string.html
 pub unsafe fn cvt_no_error(error: *const c_char) -> Result<String> {
     if error.is_null() {
-        Err(TlsError::NoError)
+        Err(Error::NoError)
     } else {
         Ok(CStr::from_ptr(error).to_string_lossy().into_owned())
     }
@@ -223,7 +223,7 @@ pub unsafe fn cvt_no_error(error: *const c_char) -> Result<String> {
 
 pub fn cvt_option<T>(option: Option<T>, error: io::Error) -> Result<T> {
     match option {
-        None => Err(TlsError::IoError(error)),
+        None => Err(Error::IoError(error)),
         Some(v) => Ok(v),
     }
 }

@@ -36,10 +36,10 @@ compatibility but you can use version `1.0.0` on older Rust versions.
 ## Examples
 
 ```rust
-use libtls::{config::{self, TlsConfig}, error};
+use libtls::{config::{self, Config}, error};
 
-fn tls_server_config() -> error::Result<TlsConfig> {
-    let mut tls_config = TlsConfig::new()?;
+fn tls_server_config() -> error::Result<Config> {
+    let mut tls_config = Config::new()?;
     tls_config.set_keypair_file("tests/eccert.crt", "tests/eccert.key")?;
     tls_config.set_protocols(libtls_sys::TLS_PROTOCOL_TLSv1_2);
     Ok(tls_config)
@@ -50,12 +50,12 @@ fn main() {
 }
 ```
 
-The same configuration can be created using the `TlsConfigBuilder`
+The same configuration can be created using the `config::Builder`
 builder pattern:
 
 ```rust
-fn tls_server_config() -> error::Result<TlsConfig> {
-    let tls_config = TlsConfigBuilder::new()
+fn tls_server_config() -> error::Result<Config> {
+    let tls_config = config::Builder::new()
         .keypair_file("tests/eccert.crt", "tests/eccert.key", None)
         .protocols(libtls_sys::TLS_PROTOCOL_TLSv1_2)
         .build()?;
@@ -66,7 +66,7 @@ fn tls_server_config() -> error::Result<TlsConfig> {
 A TLS connection:
 
 ```rust
-use libtls::{config::TlsConfigBuilder, error};
+use libtls::{config, error};
 use std::io::{Read, Write};
 
 fn sync_https_connect(servername: &str) -> error::Result<()> {
@@ -79,7 +79,7 @@ fn sync_https_connect(servername: &str) -> error::Result<()> {
         servername
     );
 
-    let mut tls = TlsConfigBuilder::new().client()?;
+    let mut tls = config::Builder::new().client()?;
 
     tls.connect(addr, None)?;
     tls.write(request.as_bytes())?;
@@ -114,7 +114,7 @@ async fn async_https_connect(servername: String) -> io::Result<()> {
         servername
     );
 
-    let config = TlsConfigBuilder::new().build()?;
+    let config = Builder::new().build()?;
     let mut tls = AsyncTls::connect(&(servername + ":443"), &config, None).await?;
     tls.write_all(request.as_bytes()).await?;
 
@@ -137,7 +137,7 @@ An asynchronous TLS server:
 
 ```rust
 async fn echo_server(cert: &str, key: &str) -> io::Result<()> {
-    let config = TlsConfigBuilder::new()
+    let config = Builder::new()
         .keypair_file(cert, key, None)
         .build()?;
 
@@ -145,8 +145,7 @@ async fn echo_server(cert: &str, key: &str) -> io::Result<()> {
     let mut listener = TcpListener::bind(&addr).await?;
 
     loop {
-        let (tcp, _) = listener.accept().await?;
-        let mut tls = AsyncTls::accept_stream(tcp, &config, None).await?;
+        let mut tls = accept(&mut listener, &config, None).await?;
 
         tokio::spawn(async move {
             loop {

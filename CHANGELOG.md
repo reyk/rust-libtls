@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.1] - 2019-12-20
+### Added
+- New `accept`, `accept_stream`, `connect`, and `connect_stream`
+  functions in [tokio-libtls].
+### Deprecated
+- `config::TlsConfig` in favour of `config::Config` in [libtls].
+- `config::TlsConfigBuilder` in favour of `config::Builder` in
+  [libtls].
+- `error::TlsError` in favour of `error::Error` in [libtls].
+- `AsyncTls::accept_stream`, `AsyncTls::connect`, and
+  `AsyncTls::connect_stream` in [tokio-libtls]; use the new
+  module-based functions instead.
+- `error::AsyncTlsError` in favour of `error::Error` in
+  [tokio-libtls].
+- `AsyncTlsOptions` in favour of `Options` in [tokio-libtls].
+### Fixed
+- Fixed warnings under Rust 1.40.
+
 ## [1.1.0] - 2019-12-06
 ### Added
 - Support for [async-await].
@@ -30,6 +48,8 @@ All notable changes to this project will be documented in this file.
 [async-await]: https://blog.rust-lang.org/2019/11/07/Async-await-stable.html
 [CHANGELOG]: CHANGELOG.md
 [tokio]: https://tokio.rs/
+[libtls]: https://crates.io/crates/libtls
 [tokio-libtls]: https://crates.io/crates/tokio-libtls
+[1.1.1]: https://github.com/reyk/rust-libtls/compare/v1.1.0..v1.1.1
 [1.1.0]: https://github.com/reyk/rust-libtls/compare/v1.0.0..v1.1.0
 [1.0.0]: https://github.com/reyk/rust-libtls/compare/fe1583dbea2c7aa086ed53303030b6f719675f8d...v1.0.0

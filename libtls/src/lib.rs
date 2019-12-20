@@ -15,10 +15,10 @@
 //! # Examples
 //!
 //! ```rust
-//! use libtls::{config::TlsConfig, error};
+//! use libtls::{config::Config, error};
 //!
-//! fn tls_server_config() -> error::Result<TlsConfig> {
-//!     let mut tls_config = TlsConfig::new()?;
+//! fn tls_server_config() -> error::Result<Config> {
+//!     let mut tls_config = Config::new()?;
 //!     tls_config.set_keypair_file("tests/eccert.crt", "tests/eccert.key")?;
 //!     tls_config.set_protocols(libtls_sys::TLS_PROTOCOL_TLSv1_2);
 //!     Ok(tls_config)
@@ -30,21 +30,19 @@
 //!
 //! ```
 //!
-//! The same configuration can be created using the [`TlsConfigBuilder`]
+//! The same configuration can be created using the [`config::Builder`]
 //! builder pattern:
 //!
 //! ```rust
-//! # use libtls::{config::{TlsConfig, TlsConfigBuilder}, error};
-//! fn tls_server_config() -> error::Result<TlsConfig> {
-//!     let tls_config = TlsConfigBuilder::new()
+//! # use libtls::{config::{Config, Builder}, error};
+//! fn tls_server_config() -> error::Result<Config> {
+//!     let tls_config = Builder::new()
 //!         .keypair_file("tests/eccert.crt", "tests/eccert.key", None)
 //!         .protocols(libtls_sys::TLS_PROTOCOL_TLSv1_2)
 //!         .build()?;
 //!     Ok(tls_config)
 //! }
-//! # fn main() {
-//! #     let tls_config = tls_server_config().unwrap();
-//! # }
+//! # let tls_config = tls_server_config().unwrap();
 //! ```
 //!
 //! # Copyright and license
@@ -89,7 +87,7 @@
 //! [libssl]: https://man.openbsd.org/ssl.3
 //! [libtls]: https://man.openbsd.org/tls_init.3
 //! [rust-openssl]: https://docs.rs/openssl/
-//! [`TlsConfigBuilder`]: config/struct.TlsConfigBuilder.html
+//! [`Builder`]: config/struct.Builder.html
 
 #![doc(
     html_logo_url = "https://www.libressl.org/images/libressl.jpg",
@@ -197,7 +195,7 @@ pub fn init() -> error::Result<()> {
 
 #[cfg(test)]
 mod test {
-    use crate::{config::TlsConfigBuilder, error};
+    use crate::{config::Builder, error};
     use std::io::{Read, Write};
 
     fn sync_https_connect(servername: &str) -> error::Result<()> {
@@ -210,7 +208,7 @@ mod test {
             servername
         );
 
-        let mut tls = TlsConfigBuilder::new().client()?;
+        let mut tls = Builder::new().client()?;
 
         tls.connect(addr, None)?;
         tls.write_all(request.as_bytes())?;

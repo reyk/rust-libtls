@@ -37,13 +37,13 @@
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 //! TLS clients or servers are created with with the [`Tls`] struct
-//! and configured with the [`TlsConfig`] configuration context.
+//! and configured with the [`Config`] configuration context.
 //!
 //! [`Tls`]: struct.Tls.html
-//! [`TlsConfig`]: ../config/struct.TlsConfig.html
+//! [`Config`]: ../config/struct.Config.html
 
 use crate::{
-    config::TlsConfig,
+    config::Config,
     error::{LastError, Result},
     *,
 };
@@ -98,7 +98,7 @@ macro_rules! try_tls {
 /// programs, [`Tls::server`] in TLS server programs.
 ///
 /// The context can then be configured with the [`configure`] method.
-/// The same [`TlsConfig`] object can be used to configure multiple contexts.
+/// The same [`Config`] object can be used to configure multiple contexts.
 ///
 /// After configuration, [`connect`] can be called on objects created with
 /// [`Tls::client`], and [`accept_socket`] on objects created with
@@ -112,7 +112,7 @@ macro_rules! try_tls {
 /// [`Tls::client`]: struct.Tls.html#method.client
 /// [`Tls::server`]: struct.Tls.html#method.server
 /// [`configure`]: struct.Tls.html#method.configure
-/// [`TlsConfig`]: ../config/struct.TlsConfig.html
+/// [`Config`]: ../config/struct.Config.html
 /// [`connect`]: struct.Tls.html#method.connect
 /// [`accept_socket`]: struct.Tls.html#method.accept_socket
 /// [`tls_close`]: struct.Tls.html#method.close
@@ -156,15 +156,15 @@ impl Tls {
     /// Configure the TLS context.
     ///
     /// The `configure` method configures a TLS connection.  The
-    /// same [`TlsConfig`] object can be used to configure multiple
+    /// same [`Config`] object can be used to configure multiple
     /// contexts.
     ///
     /// # See also
     ///
     /// [`tls_configure(3)`](https://man.openbsd.org/tls_configure.3)
     ///
-    /// [`TlsConfig`]: ../config/struct.TlsConfig.html
-    pub fn configure(&mut self, config: &TlsConfig) -> Result<()> {
+    /// [`Config`]: ../config/struct.Config.html
+    pub fn configure(&mut self, config: &Config) -> Result<()> {
         cvt(self, unsafe { libtls_sys::tls_configure(self.0, config.0) })
     }
 
@@ -913,7 +913,7 @@ impl LastError for Tls {
     }
 
     fn to_error<T>(errstr: String) -> error::Result<T> {
-        Err(error::TlsError::CtxError(errstr))
+        Err(error::Error::CtxError(errstr))
     }
 }
 

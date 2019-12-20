@@ -13,7 +13,7 @@
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 use crate::AsyncTlsStream;
-use libtls::error::TlsError;
+use libtls::error::Error as TlsError;
 use std::{error, fmt, io};
 
 /// An error returned by [`AsyncTls`].
@@ -23,7 +23,7 @@ use std::{error, fmt, io};
 ///
 /// [`AsyncTls`]: ../struct.AsyncTls.html
 #[derive(Debug)]
-pub enum AsyncTlsError {
+pub enum Error {
     /// The connection is readable.
     Readable(AsyncTlsStream),
     /// The connection is writeable.
@@ -34,37 +34,44 @@ pub enum AsyncTlsError {
     Error(TlsError),
 }
 
-impl fmt::Display for AsyncTlsError {
+/// An error returned by [`AsyncTls`].
+#[deprecated(
+    since = "1.1.1",
+    note = "Please use `Error` instead of `AsyncTlsError`"
+)]
+pub type AsyncTlsError = Error;
+
+impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            AsyncTlsError::Readable(_) => write!(f, "Readable I/O in progress"),
-            AsyncTlsError::Writeable(_) => write!(f, "Writable I/O in progress"),
-            AsyncTlsError::Handshake(_) => write!(f, "Handshake I/O in progress"),
-            AsyncTlsError::Error(err) => err.fmt(f),
+            Error::Readable(_) => write!(f, "Readable I/O in progress"),
+            Error::Writeable(_) => write!(f, "Writable I/O in progress"),
+            Error::Handshake(_) => write!(f, "Handshake I/O in progress"),
+            Error::Error(err) => err.fmt(f),
         }
     }
 }
 
-impl error::Error for AsyncTlsError {
+impl error::Error for Error {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         None
     }
 }
 
-impl From<TlsError> for AsyncTlsError {
+impl From<TlsError> for Error {
     fn from(err: TlsError) -> Self {
-        AsyncTlsError::Error(err)
+        Error::Error(err)
     }
 }
 
-impl From<io::Error> for AsyncTlsError {
+impl From<io::Error> for Error {
     fn from(err: io::Error) -> Self {
         err.into()
     }
 }
 
-impl From<AsyncTlsError> for io::Error {
-    fn from(err: AsyncTlsError) -> Self {
+impl From<Error> for io::Error {
+    fn from(err: Error) -> Self {
         io::Error::new(io::ErrorKind::Other, err)
     }
 }

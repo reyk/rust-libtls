@@ -12,7 +12,13 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-pub use crate::{AsyncTls, AsyncTlsOptions};
+pub use crate::{accept, connect, AsyncTls, Options};
 pub use futures::prelude::Future;
-pub use libtls::{config::TlsConfigBuilder, error};
-pub use tokio::net::TcpStream;
+pub use libtls::{config::Builder, error};
+pub use tokio::net::{TcpListener, TcpStream};
+
+#[allow(deprecated)]
+pub use crate::AsyncTlsOptions;
+
+#[allow(deprecated)]
+pub use libtls::config::TlsConfigBuilder;
