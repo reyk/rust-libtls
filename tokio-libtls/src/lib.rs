@@ -154,7 +154,7 @@ impl io::Write for TlsStream {
 impl AsyncRead for TlsStream {
     fn poll_read(
         mut self: Pin<&mut Self>,
-        _cx: &mut Context,
+        _cx: &mut Context<'_>,
         buf: &mut [u8],
     ) -> Poll<Result<usize, io::Error>> {
         try_async_tls!(self.tls.read(buf))
@@ -164,17 +164,20 @@ impl AsyncRead for TlsStream {
 impl AsyncWrite for TlsStream {
     fn poll_write(
         mut self: Pin<&mut Self>,
-        _cx: &mut Context,
+        _cx: &mut Context<'_>,
         buf: &[u8],
     ) -> Poll<Result<usize, io::Error>> {
         try_async_tls!(self.tls.write(buf))
     }
 
-    fn poll_flush(mut self: Pin<&mut Self>, _cx: &mut Context) -> Poll<Result<(), io::Error>> {
+    fn poll_flush(mut self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Result<(), io::Error>> {
         try_async_tls!(self.tls.close()).map(|_| Ok(()))
     }
 
-    fn poll_shutdown(mut self: Pin<&mut Self>, _cx: &mut Context) -> Poll<Result<(), io::Error>> {
+    fn poll_shutdown(
+        mut self: Pin<&mut Self>,
+        _cx: &mut Context<'_>,
+    ) -> Poll<Result<(), io::Error>> {
         try_async_tls!(self.tls.close()).map(|_| Ok(()))
     }
 }
@@ -332,7 +335,7 @@ impl AsyncTls {
 impl Future for AsyncTls {
     type Output = Result<AsyncTlsStream, io::Error>;
 
-    fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let inner = self
             .inner
             .take()

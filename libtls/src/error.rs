@@ -46,7 +46,7 @@ pub enum TlsError {
 }
 
 impl fmt::Display for TlsError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             TlsError::CtxError(s) => write!(f, "tls context: {}", s),
             TlsError::ConfigError(s) => write!(f, "tls config: {}", s),

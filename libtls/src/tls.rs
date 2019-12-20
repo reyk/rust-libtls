@@ -267,6 +267,12 @@ impl Tls {
     /// handle data transfers.  The specified `cb_arg` parameter is passed back to
     /// the functions, and can contain a pointer to any caller-specified data.
     ///
+    /// # Safety
+    ///
+    /// Use this function with caution and only when there's no better alternative.
+    /// The optional `cb_arg` is an unsafe pointer to an arbitrary data object and
+    /// the `read_cb` and `write_cb` callbacks are C-style function pointers.
+    ///
     /// # See also
     ///
     /// [`tls_accept_cbs(3)`](https://man.openbsd.org/tls_accept_cbs.3)
@@ -432,6 +438,12 @@ impl Tls {
     /// handle data transfers.  The specified `cb_arg` parameter is passed back to
     /// the functions, and can contain a pointer to any caller-specified data.
     /// The `servername` is used to validate the TLS server name.
+    ///
+    /// # Safety
+    ///
+    /// Use this function with caution and only when there's no better alternative.
+    /// The optional `cb_arg` is an unsafe pointer to an arbitrary data object and
+    /// the `read_cb` and `write_cb` callbacks are C-style function pointers.
     ///
     /// # See also
     ///

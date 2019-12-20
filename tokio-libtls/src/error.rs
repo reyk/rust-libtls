@@ -35,7 +35,7 @@ pub enum AsyncTlsError {
 }
 
 impl fmt::Display for AsyncTlsError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             AsyncTlsError::Readable(_) => write!(f, "Readable I/O in progress"),
             AsyncTlsError::Writeable(_) => write!(f, "Writable I/O in progress"),

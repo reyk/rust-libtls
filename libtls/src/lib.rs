@@ -213,10 +213,10 @@ mod test {
         let mut tls = TlsConfigBuilder::new().client()?;
 
         tls.connect(addr, None)?;
-        tls.write(request.as_bytes())?;
+        tls.write_all(request.as_bytes())?;
 
         let mut buf = vec![0u8; 1024];
-        tls.read(&mut buf)?;
+        tls.read_exact(&mut buf)?;
 
         let ok = b"HTTP/1.1 200 OK\r\n";
         assert_eq!(&buf[..ok.len()], ok);

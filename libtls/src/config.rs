@@ -64,9 +64,7 @@
 //!
 //!     Ok(tls_config)
 //! }
-//! # fn main() {
-//! #     let tls_config = tls_server_config().unwrap();
-//! # }
+//! # let tls_config = tls_server_config().unwrap();
 //! ```
 //!
 //! [`Tls`]: ../tls/struct.Tls.html
