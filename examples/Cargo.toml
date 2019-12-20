@@ -8,8 +8,8 @@ edition = "2018"
 
 [dev-dependencies]
 futures = "0.3"
-libtls = { path = "../libtls", version = "1.1.0" }
-tokio-libtls = { path = "../tokio-libtls", version = "1.1.0" }
+libtls = { path = "../libtls", version = "1.1.1" }
+tokio-libtls = { path = "../tokio-libtls", version = "1.1.1" }
 tokio = { version = "0.2", features = ["full"] }
 
 [[example]]
