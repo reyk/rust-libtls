@@ -20,7 +20,7 @@
 //! fn tls_server_config() -> error::Result<Config> {
 //!     let mut tls_config = Config::new()?;
 //!     tls_config.set_keypair_file("tests/eccert.crt", "tests/eccert.key")?;
-//!     tls_config.set_protocols(libtls_sys::TLS_PROTOCOL_TLSv1_2);
+//!     tls_config.set_protocols(libtls_sys::TLS_PROTOCOL_TLSv1_3);
 //!     Ok(tls_config)
 //! }
 //!
@@ -38,7 +38,7 @@
 //! fn tls_server_config() -> error::Result<Config> {
 //!     let tls_config = Builder::new()
 //!         .keypair_file("tests/eccert.crt", "tests/eccert.key", None)
-//!         .protocols(libtls_sys::TLS_PROTOCOL_TLSv1_2)
+//!         .protocols(libtls_sys::TLS_PROTOCOL_TLSv1_3)
 //!         .build()?;
 //!     Ok(tls_config)
 //! }
@@ -122,6 +122,7 @@ pub use libtls_sys::{
     TLS_PROTOCOL_TLSv1_0,
     TLS_PROTOCOL_TLSv1_1,
     TLS_PROTOCOL_TLSv1_2,
+    TLS_PROTOCOL_TLSv1_3,
     TLS_PROTOCOL_TLSv1,
     TLS_PROTOCOLS_ALL,
     TLS_PROTOCOLS_DEFAULT

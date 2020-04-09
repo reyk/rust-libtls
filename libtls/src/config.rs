@@ -711,10 +711,12 @@ impl Config {
     /// * [`TLS_PROTOCOL_TLSv1_0`]
     /// * [`TLS_PROTOCOL_TLSv1_1`]
     /// * [`TLS_PROTOCOL_TLSv1_2`]
+    /// * [`TLS_PROTOCOL_TLSv1_3`]
     ///
-    /// Additionally, the values [`TLS_PROTOCOL_TLSv1`] (TLSv1.0, TLSv1.1 and
-    /// TLSv1.2), [`TLS_PROTOCOLS_ALL`] (all supported protocols) and
-    /// [`TLS_PROTOCOLS_DEFAULT`] (TLSv1.2 only) may be used.
+    /// Additionally, the values [`TLS_PROTOCOL_TLSv1`] (TLSv1.0,
+    /// TLSv1.1, TLSv1.2, and TLSv1.3), [`TLS_PROTOCOLS_ALL`] (all
+    /// supported protocols) and [`TLS_PROTOCOLS_DEFAULT`] (TLSv1.2
+    /// and TLSv1.3) may be used.
     ///
     /// # Example
     ///
@@ -740,6 +742,7 @@ impl Config {
     /// [`TLS_PROTOCOL_TLSv1_0`]: ../constant.TLS_PROTOCOL_TLSv1_0.html
     /// [`TLS_PROTOCOL_TLSv1_1`]: ../constant.TLS_PROTOCOL_TLSv1_1.html
     /// [`TLS_PROTOCOL_TLSv1_2`]: ../constant.TLS_PROTOCOL_TLSv1_2.html
+    /// [`TLS_PROTOCOL_TLSv1_3`]: ../constant.TLS_PROTOCOL_TLSv1_3.html
     pub fn set_protocols(&mut self, protocols: u32) -> error::Result<()> {
         call_arg1(self, protocols, libtls_sys::tls_config_set_protocols)
     }
@@ -1050,15 +1053,17 @@ pub fn default_ca_cert_file() -> PathBuf {
 
 /// Parse protocol string.
 ///
-/// The `tls_config_parse_protocols` utility function parses a protocol
-/// string and returns the corresponding value via the protocols argument.
-/// This value can then be passed to the [`set_protocols`] method.
-/// The protocol string is a comma or colon separated list of keywords.
-/// Valid keywords are `tlsv1.0`, `tlsv1.1`, `tlsv1.2`, `all` (all supported
-/// protocols), `default` (an alias for secure), `legacy` (an alias for all) and
-/// `secure` (currently TLSv1.2 only).  If a value has a negative prefix (in
-/// the form of a leading exclamation mark) then it is removed from the list
-/// of available protocols, rather than being added to it.
+/// The `tls_config_parse_protocols` utility function parses a
+/// protocol string and returns the corresponding value via the
+/// protocols argument.  This value can then be passed to the
+/// [`set_protocols`] method.  The protocol string is a comma or colon
+/// separated list of keywords.  Valid keywords are `tlsv1.0`,
+/// `tlsv1.1`, `tlsv1.2`, `tlsv1.3`, `all` (all supported protocols),
+/// `default` (an alias for secure), `legacy` (an alias for all) and
+/// `secure` (currently TLSv1.2 and TLSv1.3).  If a value has a
+/// negative prefix (in the form of a leading exclamation mark) then
+/// it is removed from the list of available protocols, rather than
+/// being added to it.
 ///
 /// # Example
 ///
@@ -1069,9 +1074,9 @@ pub fn default_ca_cert_file() -> PathBuf {
 /// let protocols = config::parse_protocols("tlsv1.1,tlsv1.2").unwrap();
 /// assert_eq!(protocols, TLS_PROTOCOL_TLSv1_1|TLS_PROTOCOL_TLSv1_2);
 ///
-/// // The default is to use the `secure` protocols, currently TLSv1.2 only:
+/// // The default is to use the `secure` protocols:
 /// let protocols = config::parse_protocols("default").unwrap();
-/// assert_eq!(protocols, TLS_PROTOCOL_TLSv1_2);
+/// assert_eq!(protocols, TLS_PROTOCOL_TLSv1_2|TLS_PROTOCOL_TLSv1_3);
 /// #     Ok(())
 /// # }
 /// # tls_config().unwrap();
