@@ -2,6 +2,7 @@
 
 [![Crates.IO](https://img.shields.io/crates/v/libtls.svg)](https://crates.io/crates/libtls)
 [![docs.rs](https://docs.rs/libtls/badge.svg)](https://docs.rs/libtls)
+[![Actions](https://github.com/reyk/rust-libtls/workflows/Continuous%20Integration/badge.svg)](https://github.com/reyk/rust-libtls/actions)
 [![Build Status](https://travis-ci.org/reyk/rust-libtls.svg?branch=master)](https://travis-ci.org/reyk/rust-libtls)
 [![License](https://img.shields.io/badge/license-ISC-blue.svg)](https://raw.githubusercontent.com/reyk/rust-libtls/master/LICENSE)
 
