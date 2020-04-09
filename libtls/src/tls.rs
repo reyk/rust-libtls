@@ -47,7 +47,10 @@ use crate::{
     error::{LastError, Result},
     *,
 };
+#[cfg(libressl_3_1_0)]
+use std::convert::TryFrom;
 use std::{
+    convert::TryInto,
     ffi::{CStr, CString},
     io,
     net::ToSocketAddrs,
@@ -518,7 +521,12 @@ impl Tls {
     /// [`tls_handshake`]: #method.tls_handshake
     pub fn tls_read(&mut self, buf: &mut [u8]) -> error::Result<isize> {
         cvt_err(self, unsafe {
-            libtls_sys::tls_read(self.0, buf.as_mut_ptr() as *mut c_void, buf.len())
+            libtls_sys::tls_read(
+                self.0,
+                buf.as_mut_ptr() as *mut c_void,
+                buf.len().try_into()?,
+            )
+            .try_into()?
         })
     }
 
@@ -540,7 +548,8 @@ impl Tls {
     /// [`tls_handshake`]: #method.tls_handshake
     pub fn tls_write(&mut self, buf: &[u8]) -> error::Result<isize> {
         cvt_err(self, unsafe {
-            libtls_sys::tls_write(self.0, buf.as_ptr() as *const c_void, buf.len())
+            libtls_sys::tls_write(self.0, buf.as_ptr() as *const c_void, buf.len().try_into()?)
+                .try_into()?
         })
     }
 
@@ -694,7 +703,8 @@ impl Tls {
                 let errstr = self.last_error().unwrap_or_else(|_| "no error".to_string());
                 Self::to_error(errstr)
             } else {
-                let data = slice::from_raw_parts(ptr, size);
+                let len = size.try_into()?;
+                let data = slice::from_raw_parts(ptr, len);
                 Ok(data.to_vec())
             }
         }
@@ -732,6 +742,22 @@ impl Tls {
     /// [`tls_conn_cipher(3)`](https://man.openbsd.org/tls_conn_cipher.3)
     pub fn conn_cipher(&mut self) -> error::Result<String> {
         unsafe { cvt_string(self, libtls_sys::tls_conn_cipher(self.0)) }
+    }
+
+    /// Return the symmetric cipher strength.
+    ///
+    /// The `conn_cipher_strength` method returns the strength in bits
+    /// for the symmetric cipher that is being used with the peer.
+    ///
+    /// # See also
+    ///
+    /// [`tls_conn_cipher_strength(3)`](https://man.openbsd.org/tls_conn_cipher_strength.3)
+    #[cfg(libressl_3_1_0)]
+    pub fn conn_cipher_strength(&mut self) -> error::Result<usize> {
+        cvt_err(self, unsafe {
+            libtls_sys::tls_conn_cipher_strength(self.0) as isize
+        })
+        .and_then(|retval| usize::try_from(retval).map_err(Into::into))
     }
 
     /// Return the client's server name.
@@ -783,7 +809,11 @@ impl Tls {
     /// [`tls_ocsp_process_response(3)`](https://man.openbsd.org/tls_ocsp_process_response.3)
     pub fn ocsp_process_response(&mut self, response: &[u8]) -> error::Result<()> {
         cvt(self, unsafe {
-            libtls_sys::tls_ocsp_process_response(self.0, response.as_ptr(), response.len())
+            libtls_sys::tls_ocsp_process_response(
+                self.0,
+                response.as_ptr(),
+                response.len().try_into()?,
+            )
         })
     }
 

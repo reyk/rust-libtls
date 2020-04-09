@@ -1,16 +1,19 @@
 //! Rust bindings for [LibreSSL]'s [libtls] library.
 //!
-//! The [LibreSSL] project provides a free TLS and crypto stack that was forked
-//! from [OpenSSL] in 2014.  The goals are to provide a modernized codebase,
-//! improved security, and to apply best practice development processes.
+//! The [LibreSSL] project provides a free TLS and crypto stack that
+//! was forked from [OpenSSL] in 2014.  The goals are to provide a
+//! modernized codebase, improved security, and to apply best practice
+//! development processes.
 //!
-//! [LibreSSL] provides C APIs that are compatible to [OpenSSL]'s [libssl] and
-//! [libcrypto] libraries.  It also provides [libtls], a new TLS library that
-//! is designed to make it easier to write foolproof applications.
+//! [LibreSSL] provides C APIs that are compatible to [OpenSSL]'s
+//! [libssl] and [libcrypto] libraries.  It also provides [libtls], a
+//! new TLS library that is designed to make it easier to write
+//! foolproof applications.
 //!
-//! This crate provides Rust language bindings for [libtls] only, as the other
-//! [LibreSSL] APIs can be used with the existing [rust-openssl] crate.
-//! [LibreSSL] versions 2.9.0 through 3.0.2 (or later) are supported.
+//! This crate provides Rust language bindings for [libtls] only, as
+//! the other [LibreSSL] APIs can be used with the existing
+//! [rust-openssl] crate.  [LibreSSL] versions 2.9.0 through 3.1.0 (or
+//! later) are supported.  TLSv1.3 requires LibreSSL 3.1.0 or later.
 //!
 //! # Examples
 //!
@@ -20,7 +23,7 @@
 //! fn tls_server_config() -> error::Result<Config> {
 //!     let mut tls_config = Config::new()?;
 //!     tls_config.set_keypair_file("tests/eccert.crt", "tests/eccert.key")?;
-//!     tls_config.set_protocols(libtls_sys::TLS_PROTOCOL_TLSv1_2);
+//!     tls_config.set_protocols(libtls_sys::TLS_PROTOCOL_TLSv1_3);
 //!     Ok(tls_config)
 //! }
 //!
@@ -38,7 +41,7 @@
 //! fn tls_server_config() -> error::Result<Config> {
 //!     let tls_config = Builder::new()
 //!         .keypair_file("tests/eccert.crt", "tests/eccert.key", None)
-//!         .protocols(libtls_sys::TLS_PROTOCOL_TLSv1_2)
+//!         .protocols(libtls_sys::TLS_PROTOCOL_TLSv1_3)
 //!         .build()?;
 //!     Ok(tls_config)
 //! }
@@ -48,7 +51,7 @@
 //! # Copyright and license
 //!
 //! ```text
-//! Copyright (c) 2019 Reyk Floeter <contact@reykfloeter.com>
+//! Copyright (c) 2019, 2020 Reyk Floeter <contact@reykfloeter.com>
 //! ```
 //!
 //! The documentation is based on the libtls manpages of the [LibreSSL] project:
@@ -126,6 +129,10 @@ pub use libtls_sys::{
     TLS_PROTOCOLS_ALL,
     TLS_PROTOCOLS_DEFAULT
 };
+
+/// TLSv1.3 is only supported by LibreSSL 3.1.0 or later.
+#[cfg(libressl_3_1_0)]
+pub use libtls_sys::TLS_PROTOCOL_TLSv1_3;
 
 /// TLS async I/O.
 #[rustfmt::skip]

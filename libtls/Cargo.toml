@@ -1,6 +1,6 @@
 [package]
 name = "libtls"
-version = "1.1.2"
+version = "1.2.0"
 authors = ["Reyk Floeter <contact@reykfloeter.com>"]
 edition = "2018"
 license = "ISC"
@@ -14,7 +14,10 @@ keywords = ["crypto", "tls", "ssl", "libressl", "openbsd"]
 travis-ci = { repository = "reyk/rust-libtls", branch = "master" }
 
 [dependencies]
-libtls-sys = { path = "../libtls-sys", version = "1.1.2" }
+libtls-sys = { path = "../libtls-sys", version = "1.2.0" }
 
 [dev-dependencies]
-rand = "0.7.2"
+rand = "0.7.3"
+
+[build-dependencies]
+libtls-sys = { path = "../libtls-sys", version = "1.2.0" }

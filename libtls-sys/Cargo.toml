@@ -1,6 +1,6 @@
 [package]
 name = "libtls-sys"
-version = "1.1.2"
+version = "1.2.0"
 authors = ["Reyk Floeter <contact@reykfloeter.com>"]
 edition = "2018"
 license = "ISC"
@@ -16,6 +16,6 @@ build = "build.rs"
 travis-ci = { repository = "reyk/rust-libtls", branch = "master" }
 
 [build-dependencies]
-bindgen = "0.51.1"
-pkg-config = "0.3.16"
-num_cpus = "1.11.0"
+bindgen = "0.53.2"
+pkg-config = "0.3.17"
+num_cpus = "1.12.0"

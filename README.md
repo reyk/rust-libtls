@@ -2,6 +2,7 @@
 
 [![Crates.IO](https://img.shields.io/crates/v/libtls.svg)](https://crates.io/crates/libtls)
 [![docs.rs](https://docs.rs/libtls/badge.svg)](https://docs.rs/libtls)
+[![Actions](https://github.com/reyk/rust-libtls/workflows/Continuous%20Integration/badge.svg)](https://github.com/reyk/rust-libtls/actions)
 [![Build Status](https://travis-ci.org/reyk/rust-libtls.svg?branch=master)](https://travis-ci.org/reyk/rust-libtls)
 [![License](https://img.shields.io/badge/license-ISC-blue.svg)](https://raw.githubusercontent.com/reyk/rust-libtls/master/LICENSE)
 
@@ -19,8 +20,8 @@ applications.
 
 This workspace of Rust crates provides language bindings for [libtls]
 only, as the other [LibreSSL] APIs can be used with the existing
-[rust-openssl] crate.  [LibreSSL] versions 2.9.0 through 3.0.2 (or
-later) are supported.
+[rust-openssl] crate.  [LibreSSL] versions 2.9.0 through 3.1.0 (or
+later) are supported.  TLSv1.3 requires LibreSSL 3.1.0 or later.
 
 The following crates are included:
 - [libtls-sys]: FFI bindings.

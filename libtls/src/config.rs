@@ -73,6 +73,7 @@
 use crate::{error, tls::Tls, util::*};
 use std::{
     collections::HashMap,
+    convert::TryInto,
     ffi::{CStr, CString},
     io,
     marker::{Send, Sync},
@@ -215,9 +216,9 @@ impl Config {
             libtls_sys::tls_config_add_keypair_mem(
                 self.0,
                 cert.as_ptr(),
-                cert.len(),
+                cert.len().try_into()?,
                 key.as_ptr(),
-                key.len(),
+                key.len().try_into()?,
             )
         })
     }
@@ -267,11 +268,11 @@ impl Config {
             libtls_sys::tls_config_add_keypair_ocsp_mem(
                 self.0,
                 cert.as_ptr(),
-                cert.len(),
+                cert.len().try_into()?,
                 key.as_ptr(),
-                key.len(),
+                key.len().try_into()?,
                 ocsp_staple.as_ptr(),
-                ocsp_staple.len(),
+                ocsp_staple.len().try_into()?,
             )
         })
     }
@@ -351,7 +352,7 @@ impl Config {
     /// [`tls_config_set_ca_mem(3)`](https://man.openbsd.org/tls_config_set_ca_mem.3)
     pub fn set_ca_mem(&mut self, ca: &[u8]) -> error::Result<()> {
         cvt(self, unsafe {
-            libtls_sys::tls_config_set_ca_mem(self.0, ca.as_ptr(), ca.len())
+            libtls_sys::tls_config_set_ca_mem(self.0, ca.as_ptr(), ca.len().try_into()?)
         })
     }
 
@@ -365,7 +366,7 @@ impl Config {
     /// [`tls_config_set_ca_mem(3)`](https://man.openbsd.org/tls_config_set_ca_mem.3)
     pub fn tls_config_set_ca_mem(&mut self, ca: &[u8]) -> error::Result<()> {
         cvt(self, unsafe {
-            libtls_sys::tls_config_set_ca_mem(self.0, ca.as_ptr(), ca.len())
+            libtls_sys::tls_config_set_ca_mem(self.0, ca.as_ptr(), ca.len().try_into()?)
         })
     }
 
@@ -397,7 +398,7 @@ impl Config {
     /// [`tls_config_set_cert_mem(3)`](https://man.openbsd.org/tls_config_set_cert_mem.3)
     pub fn set_cert_mem(&mut self, cert: &[u8]) -> error::Result<()> {
         cvt(self, unsafe {
-            libtls_sys::tls_config_set_cert_mem(self.0, cert.as_ptr(), cert.len())
+            libtls_sys::tls_config_set_cert_mem(self.0, cert.as_ptr(), cert.len().try_into()?)
         })
     }
 
@@ -466,7 +467,7 @@ impl Config {
     /// [`tls_config_set_crl_mem(3)`](https://man.openbsd.org/tls_config_set_crl_mem.3)
     pub fn set_crl_mem(&mut self, crl: &[u8]) -> error::Result<()> {
         cvt(self, unsafe {
-            libtls_sys::tls_config_set_crl_mem(self.0, crl.as_ptr(), crl.len())
+            libtls_sys::tls_config_set_crl_mem(self.0, crl.as_ptr(), crl.len().try_into()?)
         })
     }
 
@@ -564,7 +565,7 @@ impl Config {
     /// [`tls_config_set_key_mem(3)`](https://man.openbsd.org/tls_config_set_key_mem.3)
     pub fn set_key_mem(&mut self, key: &[u8]) -> error::Result<()> {
         cvt(self, unsafe {
-            libtls_sys::tls_config_set_key_mem(self.0, key.as_ptr(), key.len())
+            libtls_sys::tls_config_set_key_mem(self.0, key.as_ptr(), key.len().try_into()?)
         })
     }
 
@@ -604,9 +605,9 @@ impl Config {
             libtls_sys::tls_config_set_keypair_mem(
                 self.0,
                 cert.as_ptr(),
-                cert.len(),
+                cert.len().try_into()?,
                 key.as_ptr(),
-                key.len(),
+                key.len().try_into()?,
             )
         })
     }
@@ -654,11 +655,11 @@ impl Config {
             libtls_sys::tls_config_set_keypair_ocsp_mem(
                 self.0,
                 cert.as_ptr(),
-                cert.len(),
+                cert.len().try_into()?,
                 key.as_ptr(),
-                key.len(),
+                key.len().try_into()?,
                 ocsp_staple.as_ptr(),
-                ocsp_staple.len(),
+                ocsp_staple.len().try_into()?,
             )
         })
     }
@@ -677,7 +678,7 @@ impl Config {
             libtls_sys::tls_config_set_ocsp_staple_mem(
                 self.0,
                 ocsp_staple.as_ptr(),
-                ocsp_staple.len(),
+                ocsp_staple.len().try_into()?,
             )
         })
     }
@@ -712,9 +713,15 @@ impl Config {
     /// * [`TLS_PROTOCOL_TLSv1_1`]
     /// * [`TLS_PROTOCOL_TLSv1_2`]
     ///
-    /// Additionally, the values [`TLS_PROTOCOL_TLSv1`] (TLSv1.0, TLSv1.1 and
-    /// TLSv1.2), [`TLS_PROTOCOLS_ALL`] (all supported protocols) and
-    /// [`TLS_PROTOCOLS_DEFAULT`] (TLSv1.2 only) may be used.
+    /// Only supported with LibreSSL 3.1.0 or later:
+    ///
+    /// * [`TLS_PROTOCOL_TLSv1_3`]
+    ///
+    /// Additionally, the values [`TLS_PROTOCOL_TLSv1`] (TLSv1.0,
+    /// TLSv1.1, TLSv1.2, and TLSv1.3), [`TLS_PROTOCOLS_ALL`] (all
+    /// supported protocols) and [`TLS_PROTOCOLS_DEFAULT`] (TLSv1.2
+    /// and TLSv1.3) may be used.  TLSv1.3 is only supported with
+    /// LibreSSL 3.1.0 or later.
     ///
     /// # Example
     ///
@@ -740,6 +747,7 @@ impl Config {
     /// [`TLS_PROTOCOL_TLSv1_0`]: ../constant.TLS_PROTOCOL_TLSv1_0.html
     /// [`TLS_PROTOCOL_TLSv1_1`]: ../constant.TLS_PROTOCOL_TLSv1_1.html
     /// [`TLS_PROTOCOL_TLSv1_2`]: ../constant.TLS_PROTOCOL_TLSv1_2.html
+    /// [`TLS_PROTOCOL_TLSv1_3`]: ../constant.TLS_PROTOCOL_TLSv1_3.html
     pub fn set_protocols(&mut self, protocols: u32) -> error::Result<()> {
         call_arg1(self, protocols, libtls_sys::tls_config_set_protocols)
     }
@@ -932,7 +940,11 @@ impl Config {
     /// [`tls_config_set_session_id(3)`](https://man.openbsd.org/tls_config_set_session_id.3)
     pub fn set_session_id(&mut self, session_id: &[u8]) -> error::Result<()> {
         cvt(self, unsafe {
-            libtls_sys::tls_config_set_session_id(self.0, session_id.as_ptr(), session_id.len())
+            libtls_sys::tls_config_set_session_id(
+                self.0,
+                session_id.as_ptr(),
+                session_id.len().try_into()?,
+            )
         })
     }
 
@@ -984,7 +996,12 @@ impl Config {
     pub fn add_ticket_key(&mut self, keyrev: u32, key: &mut [u8]) -> error::Result<()> {
         // XXX key should be const, consider changing this in the upstream API
         cvt(self, unsafe {
-            libtls_sys::tls_config_add_ticket_key(self.0, keyrev, key.as_mut_ptr(), key.len())
+            libtls_sys::tls_config_add_ticket_key(
+                self.0,
+                keyrev,
+                key.as_mut_ptr(),
+                key.len().try_into()?,
+            )
         })
     }
 }
@@ -1050,15 +1067,17 @@ pub fn default_ca_cert_file() -> PathBuf {
 
 /// Parse protocol string.
 ///
-/// The `tls_config_parse_protocols` utility function parses a protocol
-/// string and returns the corresponding value via the protocols argument.
-/// This value can then be passed to the [`set_protocols`] method.
-/// The protocol string is a comma or colon separated list of keywords.
-/// Valid keywords are `tlsv1.0`, `tlsv1.1`, `tlsv1.2`, `all` (all supported
-/// protocols), `default` (an alias for secure), `legacy` (an alias for all) and
-/// `secure` (currently TLSv1.2 only).  If a value has a negative prefix (in
-/// the form of a leading exclamation mark) then it is removed from the list
-/// of available protocols, rather than being added to it.
+/// The `tls_config_parse_protocols` utility function parses a
+/// protocol string and returns the corresponding value via the
+/// protocols argument.  This value can then be passed to the
+/// [`set_protocols`] method.  The protocol string is a comma or colon
+/// separated list of keywords.  Valid keywords are `tlsv1.0`,
+/// `tlsv1.1`, `tlsv1.2`, `tlsv1.3`, `all` (all supported protocols),
+/// `default` (an alias for secure), `legacy` (an alias for all) and
+/// `secure` (currently TLSv1.2 and TLSv1.3).  If a value has a
+/// negative prefix (in the form of a leading exclamation mark) then
+/// it is removed from the list of available protocols, rather than
+/// being added to it.
 ///
 /// # Example
 ///
@@ -1069,9 +1088,10 @@ pub fn default_ca_cert_file() -> PathBuf {
 /// let protocols = config::parse_protocols("tlsv1.1,tlsv1.2").unwrap();
 /// assert_eq!(protocols, TLS_PROTOCOL_TLSv1_1|TLS_PROTOCOL_TLSv1_2);
 ///
-/// // The default is to use the `secure` protocols, currently TLSv1.2 only:
+/// // The default is to use the `secure` protocols:
 /// let protocols = config::parse_protocols("default").unwrap();
-/// assert_eq!(protocols, TLS_PROTOCOL_TLSv1_2);
+/// assert_eq!(protocols, TLS_PROTOCOLS_DEFAULT);
+/// assert_ne!(protocols, TLS_PROTOCOLS_ALL);
 /// #     Ok(())
 /// # }
 /// # tls_config().unwrap();
@@ -1150,7 +1170,8 @@ pub fn load_file<P: AsRef<Path>>(file: P, password: Option<&str>) -> error::Resu
         if data.is_null() {
             Err(io::Error::last_os_error().into())
         } else {
-            Ok(Vec::from_raw_parts(data, size, size))
+            let len = size.try_into()?;
+            Ok(Vec::from_raw_parts(data, len, len))
         }
     }
 }
@@ -1167,7 +1188,7 @@ pub fn load_file<P: AsRef<Path>>(file: P, password: Option<&str>) -> error::Resu
 /// [`load_file`]: fn.load_file.html
 pub fn unload_file(mut data: Vec<u8>) {
     let ptr = data.as_mut_ptr();
-    let len = data.len();
+    let len = data.len() as u64;
     std::mem::forget(data);
     unsafe { libtls_sys::tls_unload_file(ptr, len) }
 }

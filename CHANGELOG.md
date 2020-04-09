@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] - 2020-04-09
+### Added
+- New with LibreSSL 3.1.0: Support for `TLSv1.3`,
+  `Tls::conn_cipher_strength` method.
+### Changed
+- New upstream release [LibreSSL 3.1.0].
+
 ## [1.1.2] - 2019-12-20
 ### Changed
 - Use whitelist for libtls bindings.
@@ -47,14 +54,18 @@ All notable changes to this project will be documented in this file.
 - This [CHANGELOG].
 - [tokio-libtls] crate to support async I/O with [tokio].
 ### Changed
+- Using upstream release [LibreSSL 3.0.2].
 - Split `close()` into `tls_close()` and `close()` as the latter
   returns Rust-style `WouldBlock`.
 
+[LibreSSL 3.1.0]: https://ftp.openbsd.org/pub/OpenBSD/LibreSSL/libressl-3.1.0-relnotes.txt
+[LibreSSL 3.0.2]: https://ftp.openbsd.org/pub/OpenBSD/LibreSSL/libressl-3.0.2-relnotes.txt
 [async-await]: https://blog.rust-lang.org/2019/11/07/Async-await-stable.html
 [CHANGELOG]: CHANGELOG.md
 [tokio]: https://tokio.rs/
 [libtls]: https://crates.io/crates/libtls
 [tokio-libtls]: https://crates.io/crates/tokio-libtls
+[1.2.0]: https://github.com/reyk/rust-libtls/compare/v1.1.2..v1.2.0
 [1.1.2]: https://github.com/reyk/rust-libtls/compare/v1.1.1..v1.1.2
 [1.1.1]: https://github.com/reyk/rust-libtls/compare/v1.1.0..v1.1.1
 [1.1.0]: https://github.com/reyk/rust-libtls/compare/v1.0.0..v1.1.0
