@@ -50,6 +50,7 @@ use crate::{
 #[cfg(libressl_3_1_0)]
 use std::convert::TryFrom;
 use std::{
+    convert::TryInto,
     ffi::{CStr, CString},
     io,
     net::ToSocketAddrs,
@@ -520,7 +521,12 @@ impl Tls {
     /// [`tls_handshake`]: #method.tls_handshake
     pub fn tls_read(&mut self, buf: &mut [u8]) -> error::Result<isize> {
         cvt_err(self, unsafe {
-            libtls_sys::tls_read(self.0, buf.as_mut_ptr() as *mut c_void, buf.len())
+            libtls_sys::tls_read(
+                self.0,
+                buf.as_mut_ptr() as *mut c_void,
+                buf.len().try_into()?,
+            )
+            .try_into()?
         })
     }
 
@@ -542,7 +548,8 @@ impl Tls {
     /// [`tls_handshake`]: #method.tls_handshake
     pub fn tls_write(&mut self, buf: &[u8]) -> error::Result<isize> {
         cvt_err(self, unsafe {
-            libtls_sys::tls_write(self.0, buf.as_ptr() as *const c_void, buf.len())
+            libtls_sys::tls_write(self.0, buf.as_ptr() as *const c_void, buf.len().try_into()?)
+                .try_into()?
         })
     }
 
@@ -696,7 +703,8 @@ impl Tls {
                 let errstr = self.last_error().unwrap_or_else(|_| "no error".to_string());
                 Self::to_error(errstr)
             } else {
-                let data = slice::from_raw_parts(ptr, size);
+                let len = size.try_into()?;
+                let data = slice::from_raw_parts(ptr, len);
                 Ok(data.to_vec())
             }
         }
@@ -801,7 +809,11 @@ impl Tls {
     /// [`tls_ocsp_process_response(3)`](https://man.openbsd.org/tls_ocsp_process_response.3)
     pub fn ocsp_process_response(&mut self, response: &[u8]) -> error::Result<()> {
         cvt(self, unsafe {
-            libtls_sys::tls_ocsp_process_response(self.0, response.as_ptr(), response.len())
+            libtls_sys::tls_ocsp_process_response(
+                self.0,
+                response.as_ptr(),
+                response.len().try_into()?,
+            )
         })
     }
 

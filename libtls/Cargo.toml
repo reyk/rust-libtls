@@ -17,7 +17,7 @@ travis-ci = { repository = "reyk/rust-libtls", branch = "master" }
 libtls-sys = { path = "../libtls-sys", version = "1.2.0" }
 
 [dev-dependencies]
-rand = "0.7.2"
+rand = "0.7.3"
 
 [build-dependencies]
 libtls-sys = { path = "../libtls-sys", version = "1.2.0" }
