@@ -10,7 +10,7 @@
 //!
 //! This crate provides Rust language bindings for [libtls] only, as the other
 //! [LibreSSL] APIs can be used with the existing [rust-openssl] crate.
-//! [LibreSSL] versions 2.9.0 through 3.0.2 (or later) are supported.
+//! [LibreSSL] versions 2.9.0 through 3.1.0 (or later) are supported.
 //!
 //! # Examples
 //!
@@ -48,7 +48,7 @@
 //! # Copyright and license
 //!
 //! ```text
-//! Copyright (c) 2019 Reyk Floeter <contact@reykfloeter.com>
+//! Copyright (c) 2019, 2020 Reyk Floeter <contact@reykfloeter.com>
 //! ```
 //!
 //! The documentation is based on the libtls manpages of the [LibreSSL] project:

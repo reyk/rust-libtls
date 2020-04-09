@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Reyk Floeter <contact@reykfloeter.com>
+// Copyright (c) 2019, 2020 Reyk Floeter <contact@reykfloeter.com>
 //
 // Permission to use, copy, modify, and distribute this software for any
 // purpose with or without fee is hereby granted, provided that the above
@@ -28,7 +28,7 @@ fn libressl() -> Vec<String> {
     use std::{path::Path, process::Command};
 
     let mut libresslsrc = "libressl-portable".to_string();
-    let libresslver = "v3.0.2";
+    let libresslver = "v3.1.0";
     let libressltar = format!("libressl-{}.tar.gz", &libresslver[1..]);
 
     let curdir = env::current_dir().unwrap();
