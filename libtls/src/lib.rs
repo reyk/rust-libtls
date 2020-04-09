@@ -1,16 +1,19 @@
 //! Rust bindings for [LibreSSL]'s [libtls] library.
 //!
-//! The [LibreSSL] project provides a free TLS and crypto stack that was forked
-//! from [OpenSSL] in 2014.  The goals are to provide a modernized codebase,
-//! improved security, and to apply best practice development processes.
+//! The [LibreSSL] project provides a free TLS and crypto stack that
+//! was forked from [OpenSSL] in 2014.  The goals are to provide a
+//! modernized codebase, improved security, and to apply best practice
+//! development processes.
 //!
-//! [LibreSSL] provides C APIs that are compatible to [OpenSSL]'s [libssl] and
-//! [libcrypto] libraries.  It also provides [libtls], a new TLS library that
-//! is designed to make it easier to write foolproof applications.
+//! [LibreSSL] provides C APIs that are compatible to [OpenSSL]'s
+//! [libssl] and [libcrypto] libraries.  It also provides [libtls], a
+//! new TLS library that is designed to make it easier to write
+//! foolproof applications.
 //!
-//! This crate provides Rust language bindings for [libtls] only, as the other
-//! [LibreSSL] APIs can be used with the existing [rust-openssl] crate.
-//! [LibreSSL] versions 2.9.0 through 3.1.0 (or later) are supported.
+//! This crate provides Rust language bindings for [libtls] only, as
+//! the other [LibreSSL] APIs can be used with the existing
+//! [rust-openssl] crate.  [LibreSSL] versions 2.9.0 through 3.1.0 (or
+//! later) are supported.  TLSv1.3 requires LibreSSL 3.1.0 or later.
 //!
 //! # Examples
 //!
@@ -122,11 +125,14 @@ pub use libtls_sys::{
     TLS_PROTOCOL_TLSv1_0,
     TLS_PROTOCOL_TLSv1_1,
     TLS_PROTOCOL_TLSv1_2,
-    TLS_PROTOCOL_TLSv1_3,
     TLS_PROTOCOL_TLSv1,
     TLS_PROTOCOLS_ALL,
     TLS_PROTOCOLS_DEFAULT
 };
+
+/// TLSv1.3 is only supported by LibreSSL 3.1.0 or later.
+#[cfg(libressl_3_1_0)]
+pub use libtls_sys::TLS_PROTOCOL_TLSv1_3;
 
 /// TLS async I/O.
 #[rustfmt::skip]

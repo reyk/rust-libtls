@@ -47,6 +47,8 @@ use crate::{
     error::{LastError, Result},
     *,
 };
+#[cfg(libressl_3_1_0)]
+use std::convert::TryFrom;
 use std::{
     ffi::{CStr, CString},
     io,
@@ -732,6 +734,22 @@ impl Tls {
     /// [`tls_conn_cipher(3)`](https://man.openbsd.org/tls_conn_cipher.3)
     pub fn conn_cipher(&mut self) -> error::Result<String> {
         unsafe { cvt_string(self, libtls_sys::tls_conn_cipher(self.0)) }
+    }
+
+    /// Return the symmetric cipher strength.
+    ///
+    /// The `conn_cipher_strength` method returns the strength in bits
+    /// for the symmetric cipher that is being used with the peer.
+    ///
+    /// # See also
+    ///
+    /// [`tls_conn_cipher_strength(3)`](https://man.openbsd.org/tls_conn_cipher_strength.3)
+    #[cfg(libressl_3_1_0)]
+    pub fn conn_cipher_strength(&mut self) -> error::Result<usize> {
+        cvt_err(self, unsafe {
+            libtls_sys::tls_conn_cipher_strength(self.0) as isize
+        })
+        .and_then(|retval| usize::try_from(retval).map_err(Into::into))
     }
 
     /// Return the client's server name.

@@ -4,7 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [1.2.0] - 2020-04-09
 ### Added
-- Support for `TLSv1.3` (enabled by default).
+- New with LibreSSL 3.1.0: Support for `TLSv1.3`,
+  `Tls::conn_cipher_strength` method.
 ### Changed
 - New upstream release [LibreSSL 3.1.0].
 

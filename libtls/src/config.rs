@@ -711,12 +711,16 @@ impl Config {
     /// * [`TLS_PROTOCOL_TLSv1_0`]
     /// * [`TLS_PROTOCOL_TLSv1_1`]
     /// * [`TLS_PROTOCOL_TLSv1_2`]
+    ///
+    /// Only supported with LibreSSL 3.1.0 or later:
+    ///
     /// * [`TLS_PROTOCOL_TLSv1_3`]
     ///
     /// Additionally, the values [`TLS_PROTOCOL_TLSv1`] (TLSv1.0,
     /// TLSv1.1, TLSv1.2, and TLSv1.3), [`TLS_PROTOCOLS_ALL`] (all
     /// supported protocols) and [`TLS_PROTOCOLS_DEFAULT`] (TLSv1.2
-    /// and TLSv1.3) may be used.
+    /// and TLSv1.3) may be used.  TLSv1.3 is only supported with
+    /// LibreSSL 3.1.0 or later.
     ///
     /// # Example
     ///
@@ -1076,7 +1080,8 @@ pub fn default_ca_cert_file() -> PathBuf {
 ///
 /// // The default is to use the `secure` protocols:
 /// let protocols = config::parse_protocols("default").unwrap();
-/// assert_eq!(protocols, TLS_PROTOCOL_TLSv1_2|TLS_PROTOCOL_TLSv1_3);
+/// assert_eq!(protocols, TLS_PROTOCOLS_DEFAULT);
+/// assert_ne!(protocols, TLS_PROTOCOLS_ALL);
 /// #     Ok(())
 /// # }
 /// # tls_config().unwrap();

@@ -20,7 +20,7 @@ applications.
 This workspace of Rust crates provides language bindings for [libtls]
 only, as the other [LibreSSL] APIs can be used with the existing
 [rust-openssl] crate.  [LibreSSL] versions 2.9.0 through 3.1.0 (or
-later) are supported.
+later) are supported.  TLSv1.3 requires LibreSSL 3.1.0 or later.
 
 The following crates are included:
 - [libtls-sys]: FFI bindings.
