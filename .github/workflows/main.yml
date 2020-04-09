@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [ "**" ]
 
-name: Continuous Integration
+name: actions
 
 jobs:
   ci:
@@ -15,7 +15,6 @@ jobs:
           - stable
           - beta
           - nightly
-          - 1.42.0  # MSRV
 
     steps:
       - name: Checkout
