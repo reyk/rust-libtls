@@ -36,17 +36,10 @@ fn libressl() -> Vec<String> {
 
     if Path::new(&libressltar).exists() {
         Command::new("tar")
-            .args(&[
-                "--xform",
-                &format!("s/^libressl-{}/{}/", &libresslver[1..], libresslsrc),
-                "-C",
-                &outdir,
-                "-zxf",
-                &libressltar,
-            ])
+            .args(&["-C", &outdir, "-zxf", &libressltar])
             .status()
             .unwrap();
-        libresslsrc = format!("{}/{}", outdir, libresslsrc);
+        libresslsrc = format!("{}/libressl-{}", outdir, &libresslver[1..]);
     } else if Path::new("../.gitmodules").exists() {
         Command::new("git")
             .args(&["submodule", "update", "--init"])
