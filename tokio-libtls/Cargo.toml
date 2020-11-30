@@ -1,6 +1,6 @@
 [package]
 name = "tokio-libtls"
-version = "1.2.0"
+version = "2.0.0"
 authors = ["Reyk Floeter <contact@reykfloeter.com>"]
 edition = "2018"
 license = "ISC"
@@ -14,10 +14,10 @@ keywords = ["tokio", "tls", "ssl", "libressl", "openbsd"]
 travis-ci = { repository = "reyk/rust-libtls", branch = "master" }
 
 [dependencies]
-futures = "0.3.4"
+futures = "0.3.8"
 libtls = { path = "../libtls", version = "1.2.0" }
-mio = "0.6.21"
-tokio = { version = "0.2.16", features = ["io-driver", "tcp", "time"] }
+mio = "0.7.6"
+tokio = { version = "0.3.4", features = ["net", "time"] }
 
 [dev-dependencies]
-tokio = { version = "0.2.16", features = ["full"] }
+tokio = { version = "0.3.4", features = ["full"] }

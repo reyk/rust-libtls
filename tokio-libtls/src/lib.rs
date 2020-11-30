@@ -60,18 +60,14 @@
 )]
 #![warn(missing_docs)]
 
-/// Error handling.
-pub mod error;
-
 /// A "prelude" for crates using the `tokio-libtls` crate.
 pub mod prelude;
 
-use error::Error;
+use futures::ready;
 use libtls::{config::Config, error::Error as TlsError, tls::Tls};
-use mio::{event::Evented, unix::EventedFd, PollOpt, Ready, Token};
 use prelude::*;
 use std::{
-    io::{self, Read, Write},
+    io,
     net::ToSocketAddrs,
     ops::{Deref, DerefMut},
     os::unix::io::{AsRawFd, RawFd},
@@ -80,38 +76,51 @@ use std::{
     time::Duration,
 };
 use tokio::{
-    io::{AsyncRead, AsyncWrite, PollEvented},
+    io::{AsyncRead, AsyncWrite, ReadBuf},
     net::{TcpListener, TcpStream},
     time::timeout,
 };
 
-macro_rules! try_async_tls {
-    ($call: expr) => {
-        match $call {
-            Ok(size) => Poll::Ready(Ok(size)),
-            Err(err) => {
-                let err: io::Error = err.into();
-                if err.kind() == io::ErrorKind::WouldBlock {
-                    Poll::Pending
-                } else {
-                    Poll::Ready(Err(err))
-                }
-            }
-        }
-    };
-}
-
 /// Wrapper for async I/O operations with `Tls`.
 #[derive(Debug)]
 pub struct TlsStream {
-    tls: Tls,
-    tcp: TcpStream,
+    /// The underlying `Tls` instance for this `TlsStream`.
+    pub tls: Tls,
+    /// The underlying `TcpStream` for this `TlsStream`.
+    ///
+    /// This can be used to poll the readable and writable status of the socket, if necessary.
+    pub tcp: TcpStream,
 }
 
 impl TlsStream {
     /// Create new `TlsStream` from `Tls` object and `TcpStream`.
     pub fn new(tls: Tls, tcp: TcpStream) -> Self {
         Self { tls, tcp }
+    }
+
+    /// Attempts an IO action, handling `TLS_WANT_POLLIN` and `TLS_WANT_POLLOUT`.
+    ///
+    /// This function calls `f` repeatedly, rescheduling this task whenever it returns
+    /// `TLS_WANT_POLLIN` or `TLS_WANT_POLLOUT`.
+    fn poll_io(
+        &mut self,
+        cx: &mut Context<'_>,
+        mut f: impl FnMut(&mut Tls) -> Result<isize, TlsError>,
+    ) -> Poll<io::Result<isize>> {
+        loop {
+            match f(&mut self.tls) {
+                Err(err) => return Poll::Ready(Err(err.into())),
+                Ok(value) => {
+                    if value == libtls::TLS_WANT_POLLIN as isize {
+                        ready!(self.tcp.poll_read_ready(cx)?);
+                    } else if value == libtls::TLS_WANT_POLLOUT as isize {
+                        ready!(self.tcp.poll_write_ready(cx)?);
+                    } else {
+                        return Poll::Ready(Ok(value));
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -154,75 +163,49 @@ impl io::Write for TlsStream {
 impl AsyncRead for TlsStream {
     fn poll_read(
         mut self: Pin<&mut Self>,
-        _cx: &mut Context<'_>,
-        buf: &mut [u8],
-    ) -> Poll<Result<usize, io::Error>> {
-        try_async_tls!(self.tls.read(buf))
+        cx: &mut Context<'_>,
+        buf: &mut ReadBuf<'_>,
+    ) -> Poll<io::Result<()>> {
+        // libtls should correctly fill the uninintialized buffer, so this unsafe is okay
+        unsafe {
+            let b = &mut *(buf.unfilled_mut() as *mut [std::mem::MaybeUninit<u8>] as *mut [u8]);
+            let n = ready!(self.poll_io(cx, |tls| tls.tls_read(b))?) as usize;
+            buf.assume_init(n);
+            buf.advance(n);
+            Poll::Ready(Ok(()))
+        }
     }
 }
 
 impl AsyncWrite for TlsStream {
     fn poll_write(
         mut self: Pin<&mut Self>,
-        _cx: &mut Context<'_>,
+        cx: &mut Context<'_>,
         buf: &[u8],
-    ) -> Poll<Result<usize, io::Error>> {
-        try_async_tls!(self.tls.write(buf))
+    ) -> Poll<io::Result<usize>> {
+        let n = ready!(self.poll_io(cx, |tls| tls.tls_write(buf))?) as usize;
+        Poll::Ready(Ok(n))
     }
 
-    fn poll_flush(mut self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Result<(), io::Error>> {
-        try_async_tls!(self.tls.close()).map(|_| Ok(()))
+    fn poll_flush(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Result<(), io::Error>> {
+        Poll::Ready(Ok(()))
     }
 
     fn poll_shutdown(
         mut self: Pin<&mut Self>,
-        _cx: &mut Context<'_>,
+        cx: &mut Context<'_>,
     ) -> Poll<Result<(), io::Error>> {
-        try_async_tls!(self.tls.close()).map(|_| Ok(()))
-    }
-}
-
-impl Evented for TlsStream {
-    fn register(
-        &self,
-        poll: &mio::Poll,
-        token: Token,
-        interest: Ready,
-        opts: PollOpt,
-    ) -> io::Result<()> {
-        match EventedFd(&self.as_raw_fd()).register(poll, token, interest, opts) {
-            Err(ref err) if err.kind() == io::ErrorKind::AlreadyExists => {
-                self.reregister(poll, token, interest, opts)
-            }
-            Err(err) => Err(err),
-            Ok(_) => Ok(()),
-        }
-    }
-
-    fn reregister(
-        &self,
-        poll: &mio::Poll,
-        token: Token,
-        interest: Ready,
-        opts: PollOpt,
-    ) -> io::Result<()> {
-        EventedFd(&self.as_raw_fd()).reregister(poll, token, interest, opts)
-    }
-
-    fn deregister(&self, poll: &mio::Poll) -> io::Result<()> {
-        EventedFd(&self.as_raw_fd()).deregister(poll)
+        ready!(self.poll_io(cx, |tls| tls.tls_close())?);
+        Poll::Ready(Ok(()))
     }
 }
 
 unsafe impl Send for TlsStream {}
 unsafe impl Sync for TlsStream {}
 
-/// Pollable wrapper for async I/O operations with `Tls`.
-pub type AsyncTlsStream = PollEvented<TlsStream>;
-
 /// Async `Tls` struct.
 pub struct AsyncTls {
-    inner: Option<Result<AsyncTlsStream, Error>>,
+    stream: Option<TlsStream>,
 }
 
 impl AsyncTls {
@@ -232,7 +215,7 @@ impl AsyncTls {
         tcp: TcpStream,
         config: &Config,
         options: Option<Options>,
-    ) -> io::Result<AsyncTlsStream> {
+    ) -> io::Result<TlsStream> {
         accept_stream(tcp, config, options).await
     }
 
@@ -242,7 +225,7 @@ impl AsyncTls {
         tcp: TcpStream,
         config: &Config,
         options: Option<Options>,
-    ) -> io::Result<AsyncTlsStream> {
+    ) -> io::Result<TlsStream> {
         connect_stream(tcp, config, options).await
     }
 
@@ -252,63 +235,21 @@ impl AsyncTls {
         host: &str,
         config: &Config,
         options: Option<Options>,
-    ) -> io::Result<AsyncTlsStream> {
+    ) -> io::Result<TlsStream> {
         connect(host, config, options).await
     }
 }
 
 impl Future for AsyncTls {
-    type Output = Result<AsyncTlsStream, io::Error>;
+    type Output = Result<TlsStream, io::Error>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        let inner = self
-            .inner
-            .take()
-            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "cannot take inner"))?;
-        match inner {
-            Ok(tls) => {
-                cx.waker().wake_by_ref();
-                Poll::Ready(Ok(tls))
-            }
-            Err(Error::Readable(stream)) => {
-                self.inner = match stream.poll_read_ready(cx, Ready::readable()) {
-                    Poll::Ready(_) => Some(Err(Error::Handshake(stream))),
-                    _ => Some(Err(Error::Handshake(stream))),
-                };
-                cx.waker().wake_by_ref();
-                Poll::Pending
-            }
-            Err(Error::Writeable(stream)) => {
-                self.inner = match stream.poll_write_ready(cx) {
-                    Poll::Ready(_) => Some(Err(Error::Handshake(stream))),
-                    _ => Some(Err(Error::Writeable(stream))),
-                };
-                cx.waker().wake_by_ref();
-                Poll::Pending
-            }
-            Err(Error::Handshake(mut stream)) => {
-                let tls = &mut *stream.get_mut();
-                let res = match tls.tls_handshake() {
-                    Ok(res) => {
-                        if res == libtls::TLS_WANT_POLLIN as isize {
-                            Err(Error::Readable(stream))
-                        } else if res == libtls::TLS_WANT_POLLOUT as isize {
-                            Err(Error::Writeable(stream))
-                        } else {
-                            Ok(stream)
-                        }
-                    }
-                    Err(err) => Err(err.into()),
-                };
-                self.inner = Some(res);
-                cx.waker().wake_by_ref();
-                Poll::Pending
-            }
-            Err(Error::Error(TlsError::IoError(err))) => Poll::Ready(Err(err)),
-            Err(Error::Error(err)) => {
-                Poll::Ready(Err(io::Error::new(io::ErrorKind::Other, err.to_string())))
-            }
-        }
+        let stream = self
+            .stream
+            .as_mut()
+            .expect("AsyncTls::poll called again after returning Poll::Ready");
+        ready!(stream.poll_io(cx, |tls| tls.tls_handshake())?);
+        Poll::Ready(Ok(self.stream.take().unwrap()))
     }
 }
 
@@ -320,7 +261,7 @@ pub async fn accept(
     listener: &mut TcpListener,
     config: &Config,
     options: Option<Options>,
-) -> io::Result<AsyncTlsStream> {
+) -> io::Result<TlsStream> {
     let options = options.unwrap_or_else(Options::new);
 
     let (tcp, _) = listener.accept().await?;
@@ -328,10 +269,9 @@ pub async fn accept(
     server.configure(config)?;
     let client = server.accept_raw_fd(&tcp)?;
 
-    let async_tls = TlsStream::new(client, tcp);
-    let stream = PollEvented::new(async_tls)?;
+    let stream = TlsStream::new(client, tcp);
     let fut = AsyncTls {
-        inner: Some(Err(Error::Readable(stream))),
+        stream: Some(stream),
     };
 
     // Accept with an optional timeout for the TLS handshake.
@@ -351,17 +291,16 @@ pub async fn accept_stream(
     tcp: TcpStream,
     config: &Config,
     options: Option<Options>,
-) -> io::Result<AsyncTlsStream> {
+) -> io::Result<TlsStream> {
     let options = options.unwrap_or_else(Options::new);
 
     let mut server = Tls::server()?;
     server.configure(config)?;
     let client = server.accept_raw_fd(&tcp)?;
 
-    let async_tls = TlsStream::new(client, tcp);
-    let stream = PollEvented::new(async_tls)?;
+    let stream = TlsStream::new(client, tcp);
     let fut = AsyncTls {
-        inner: Some(Err(Error::Readable(stream))),
+        stream: Some(stream),
     };
 
     // Accept with an optional timeout for the TLS handshake.
@@ -381,7 +320,7 @@ pub async fn connect_stream(
     tcp: TcpStream,
     config: &Config,
     options: Option<Options>,
-) -> io::Result<AsyncTlsStream> {
+) -> io::Result<TlsStream> {
     let options = options.unwrap_or_else(Options::new);
     let servername = match options.servername {
         Some(name) => name,
@@ -393,10 +332,9 @@ pub async fn connect_stream(
     tls.configure(config)?;
     tls.connect_raw_fd(&tcp, &servername)?;
 
-    let async_tls = TlsStream::new(tls, tcp);
-    let stream = PollEvented::new(async_tls)?;
+    let stream = TlsStream::new(tls, tcp);
     let fut = AsyncTls {
-        inner: Some(Err(Error::Readable(stream))),
+        stream: Some(stream),
     };
 
     // Connect with an optional timeout for the TLS handshake.
@@ -416,7 +354,7 @@ pub async fn connect(
     host: &str,
     config: &Config,
     options: Option<Options>,
-) -> io::Result<AsyncTlsStream> {
+) -> io::Result<TlsStream> {
     let mut options = options.unwrap_or_else(Options::new);
 
     // Remove _last_ colon (to satisfy the IPv6 form, e.g. [::1]::443).
