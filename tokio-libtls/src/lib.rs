@@ -177,6 +177,17 @@ impl AsyncRead for TlsStream {
     }
 }
 
+impl futures::io::AsyncRead for TlsStream {
+    fn poll_read(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &mut [u8]
+    ) -> Poll<io::Result<usize>> {
+        let n = ready!(self.poll_io(cx, |tls| tls.tls_read(buf))?) as usize;
+        Poll::Ready(Ok(n))
+    }
+}
+
 impl AsyncWrite for TlsStream {
     fn poll_write(
         mut self: Pin<&mut Self>,
@@ -192,6 +203,29 @@ impl AsyncWrite for TlsStream {
     }
 
     fn poll_shutdown(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Result<(), io::Error>> {
+        ready!(self.poll_io(cx, |tls| tls.tls_close())?);
+        Poll::Ready(Ok(()))
+    }
+}
+
+impl futures::io::AsyncWrite for TlsStream {
+    fn poll_write(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &[u8],
+    ) -> Poll<io::Result<usize>> {
+        let n = ready!(self.poll_io(cx, |tls| tls.tls_write(buf))?) as usize;
+        Poll::Ready(Ok(n))
+    }
+
+    fn poll_flush(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Result<(), io::Error>> {
+        Poll::Ready(Ok(()))
+    }
+
+    fn poll_close(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
     ) -> Poll<Result<(), io::Error>> {

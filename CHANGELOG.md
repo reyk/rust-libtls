@@ -3,6 +3,8 @@
 All notable changes to this project will be documented in this file.
 
 ## [2.0.0] - Unreleased
+### Added
+- Implement `futures::io::AsyncRead` and `futures::io::AsyncWrite` for `libtls::TlsStream` in [tokio-libtls].
 ### Breaking changes
 - Switched tokio version to 0.3.
 - Removed `AsyncTlsStream` from [tokio-libtls]. `TlsStream` can now be used in all cases where `AsyncTlsStream` could previously.
