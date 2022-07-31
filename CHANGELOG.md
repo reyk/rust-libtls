@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0] - Unreleased
+### Breaking changes
+- Switched tokio version to 0.3.
+- Removed `AsyncTlsStream` from [tokio-libtls]. `TlsStream` can now be used in all cases where `AsyncTlsStream` could previously.
+- Removed `Error` from [tokio-libtls]. Now just use `libtls::TlsError` instead.
+
 ## [1.2.0] - 2020-04-09
 ### Added
 - New with LibreSSL 3.1.0: Support for `TLSv1.3`,
