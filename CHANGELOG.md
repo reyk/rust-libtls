@@ -2,6 +2,8 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0] - Unreleased
+
 ## [1.2.0] - 2020-04-09
 ### Added
 - New with LibreSSL 3.1.0: Support for `TLSv1.3`,

@@ -1,6 +1,6 @@
 [package]
 name = "tokio-libtls"
-version = "1.2.0"
+version = "2.0.0"
 authors = ["Reyk Floeter <contact@reykfloeter.com>"]
 edition = "2018"
 license = "ISC"
@@ -15,7 +15,7 @@ travis-ci = { repository = "reyk/rust-libtls", branch = "master" }
 
 [dependencies]
 futures = "0.3.4"
-libtls = { path = "../libtls", version = "1.2.0" }
+libtls = { path = "../libtls", version = "2.0.0" }
 mio = "0.6.21"
 tokio = { version = "0.2.16", features = ["io-driver", "tcp", "time"] }
 
